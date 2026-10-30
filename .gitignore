@@ -1,0 +1,7 @@
+.env
+.tunnel_url
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+data/

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1829">
+  <meta name="description" content="Real-time sales copilot prototype, with local test mode and live microphone transcription.">
+  <title>Live Sales Copilot | MVP</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Sales Copilot home">
+        <span class="brand-logo" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>Sales<span class="brand-light">Copilot</span></span>
+      </a>
+      <div class="topbar-right">
+        <span class="micro-label">REAL-TIME ADVISOR / PROTOTYPE</span>
+        <span class="state-pill" id="connection-pill"><span class="state-dot"></span><span id="connection-label">Offline</span></span>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="page-heading">
+        <div><div class="eyebrow">CONVERSATION INTELLIGENCE</div>
+          <h1>Know what to say <span>next.</span></h1>
+          <p>Turn the conversation into timely, grounded sales guidance.</p>
+        </div>
+        <div class="live-clock"><span id="session-timer">00:00</span><small>SESSION TIME</small></div>
+      </div>
+
+      <div class="mode-note" role="note"><span class="info-icon">i</span>
+        <div><strong>Microphone-only prototype.</strong> It hears your local microphone, not the remote side of a mobile carrier call. Use a consented telephony/media-stream integration to capture both speakers.</div>
+      </div>
+
+      <div class="dashboard-grid">
+        <section class="panel transcript-panel" aria-label="Conversation transcript">
+          <div class="panel-head">
+            <div class="title-group"><span class="section-mark mark-blue"></span><div><h2>Live conversation</h2><p>Transcript appears here as you speak</p></div></div>
+            <span class="head-tag" id="transcript-mode">MIC / TEST INPUT</span>
+          </div>
+          <div class="audio-strip">
+            <span class="wave-icon" aria-hidden="true">◉</span><span id="audio-state">Waiting for input</span>
+            <div class="levels" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="transcript-feed" id="transcript-feed" aria-live="polite" aria-relevant="additions">
+            <div class="empty-state" id="transcript-empty">
+              <div class="empty-art">“</div>
+              <h3>Your conversation starts here</h3>
+              <p>Connect, enter a test utterance, or activate your microphone once Deepgram is configured.</p>
+            </div>
+          </div>
+          <div class="interim" id="interim" aria-live="off"></div>
+        </section>
+
+        <section class="panel insight-panel" aria-label="Sales copilot recommendations">
+          <div class="panel-head">
+            <div class="title-group"><span class="section-mark mark-teal"></span><div><h2>Your next best move</h2><p>Suggestions based on company playbooks</p></div></div>
+            <span class="head-tag">LIVE STRATEGY</span>
+          </div>
+          <div class="primary-insight" id="insight-area">
+            <div class="insight-kicker"><span class="sparkle">✦</span> COPILOT SUGGESTION <span id="ai-badge" class="insight-model">READY</span></div>
+            <p class="insight-text" id="hint-text">A relevant sales hint will appear here after each complete utterance.</p>
+            <div class="insight-footer"><span id="latency">Based on your playbook</span><span id="hint-counter">0 hints</span></div>
+          </div>
+          <div class="reference-head"><h3>Retrieved playbook context</h3><span id="rag-mode">LOCAL RETRIEVAL</span></div>
+          <div class="references" id="source-list">
+            <div class="source-placeholder">Reference excerpts used to ground the guidance will appear here.</div>
+          </div>
+          <div class="small-print">Recommendations are advisory. Verify customer-specific claims, pricing, and approved policies before responding.</div>
+        </section>
+      </div>
+
+      <section class="panel controls-panel" aria-label="Capture and testing controls">
+        <div class="panel-head control-heading">
+          <div class="title-group"><span class="section-mark mark-orange"></span><div><h2>Session controls</h2><p>Run an end-to-end text test, or stream real microphone audio</p></div></div>
+          <span id="mode-indicator" class="mode-indicator">Checking setup…</span>
+        </div>
+        <div class="control-columns">
+          <div class="control-left">
+            <label for="access-code">Local demo access code</label>
+            <div class="access-row">
+              <input id="access-code" type="password" autocomplete="off" placeholder="Paste the code printed by init_env.py" spellcheck="false">
+              <button class="button secondary" id="connect-btn">Connect</button>
+              <button class="button ghost" id="disconnect-btn" disabled>Disconnect</button>
+            </div>
+            <div class="microphone-controls">
+              <button class="button primary" id="start-mic" disabled><span class="mic-symbol">●</span> Start microphone</button>
+              <button class="button ghost" id="stop-mic" disabled>Stop microphone</button>
+              <span class="field-hint" id="mic-helper">Requires Deepgram and microphone permission.</span>
+            </div>
+            <label for="call-number" style="margin-top: 14px; display: block;">Call phone number via Twilio</label>
+            <div class="access-row">
+              <input id="call-number" type="tel" autocomplete="tel" placeholder="+917520850690 or 10-digit Indian mobile" value="+917520850690" spellcheck="false">
+              <button class="button primary" id="make-call-btn">📞 Call Phone</button>
+            </div>
+            <span class="field-hint" id="call-helper">Streams two-way phone audio into Deepgram &amp; Copilot hints.</span>
+          </div>
+          <div class="control-right">
+            <label for="test-text">Test a sales conversation without audio</label>
+            <textarea id="test-text" maxlength="700" rows="2" placeholder="Example: Your solution seems expensive. We already manage customer inquiries using Excel.">Your solution seems expensive. We already manage customer inquiries using Excel.</textarea>
+            <div class="send-row"><span class="field-hint">Simulated input. Not AI speech-to-text.</span><button class="button secondary" id="send-test" disabled>Generate suggestion <span aria-hidden="true">↗</span></button></div>
+          </div>
+        </div>
+        <div id="notice" class="notice" role="status" aria-live="polite">Open this page on localhost or HTTPS to use the microphone.</div>
+      </section>
+      <footer class="footer"><span>SALES COPILOT / DEVELOPMENT MVP</span><span>Audio is processed in memory; no recording file is created by this application.</span></footer>
+    </main>
+  </div>
+</body>
+</html>
