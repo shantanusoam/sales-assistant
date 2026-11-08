@@ -17,9 +17,12 @@ def _env(name: str, default: str = "") -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    demo_access_code: str = field(default_factory=lambda: _env("DEMO_ACCESS_CODE"))
     session_signing_key: str = field(default_factory=lambda: _env("SESSION_SIGNING_KEY"))
-    token_ttl_seconds: int = 600
+    master_encryption_key: str = field(default_factory=lambda: _env("MASTER_ENCRYPTION_KEY"))
+    database_url: str = field(default_factory=lambda: _env(
+        "DATABASE_URL", f"sqlite+aiosqlite:///{(ROOT / 'data' / 'app.db').as_posix()}"
+    ))
+    token_ttl_seconds: int = 60 * 60 * 12
     allowed_origins: tuple[str, ...] = field(default_factory=lambda: tuple(
         x.strip() for x in _env("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()
     ))
@@ -41,7 +44,5 @@ class Settings:
 
     @property
     def configured(self) -> bool:
-        return (len(self.demo_access_code) >= 12
-                and len(self.session_signing_key) >= 32
-                and not self.demo_access_code.startswith("REPLACE_WITH_")
+        return (len(self.session_signing_key) >= 32
                 and not self.session_signing_key.startswith("REPLACE_WITH_"))

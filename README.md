@@ -14,18 +14,27 @@ Sub-second *interim transcription* may be achievable under good network conditio
 
 ```text
 frontend/pcm-worklet.js   Browser mic -> mono PCM16 LE, 16 kHz, 100 ms frames
+frontend/api.js           Session storage + authenticated fetch helper
+frontend/login.js/.html   Email/password login
+frontend/signup.js/.html  Create an organization (first admin account)
 frontend/app.js           WebSocket auth, audio sending, live transcript, hints
 frontend/index.html       Responsive dashboard
 frontend/style.css        Dashboard styling
-backend/app/auth.py       Shared demo access code -> HMAC-signed short-lived token
+backend/app/auth.py       Password hashing + claims-based HMAC-signed session tokens
+backend/app/auth_routes.py Signup/login/invite/me endpoints
+backend/app/deps.py       FastAPI auth dependency (Bearer token -> claims)
+backend/app/db.py         Async SQLAlchemy engine/session plumbing
+backend/app/models.py     Organization / User / Membership / Call / Turn / Hint ORM models
+backend/app/calls_routes.py Org-scoped call history endpoints (GET /api/calls, /api/calls/{id})
 backend/app/main.py       WebSocket ingestion, latest-only hint queue, UI server
 backend/app/deepgram.py   Deepgram streaming STT WebSocket adapter
 backend/app/knowledge.py Markdown chunking, lexical fallback, Chroma vector retrieval
 backend/app/agent.py     Grounded 1-line instruction using LLM or demo rules
-scripts/init_env.py      Creates random local demo credentials
+alembic/                 Database migrations (run `alembic upgrade head`)
+scripts/init_env.py      Creates a private .env with fresh secrets
 scripts/ingest.py        Embeds and indexes markdown playbooks into Chroma
 playbooks/*.md           Illustrative documents; replace with approved company content
-tests/                   Authentication, retrieval, and WebSocket integration tests
+tests/                   Auth, retrieval, and WebSocket integration tests
 ```
 
 ## 1. Install
@@ -38,11 +47,12 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python scripts/init_env.py
+python -m alembic upgrade head
 ```
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` instead of `source .venv/bin/activate`.
 
-The initialization script creates a private `.env` and prints the local demo access code. **Do not commit `.env`.** The project archive includes only `.env.example`.
+The initialization script creates a private `.env` with a fresh session-signing key and encryption key. **Do not commit `.env`.** The project archive includes only `.env.example`. By default the app stores data in a local SQLite file (`data/app.db`); set `DATABASE_URL` to a Postgres connection string for a real pilot deployment and re-run `alembic upgrade head` against it.
 
 ## 2. Launch a free text test (no provider keys)
 
@@ -50,7 +60,7 @@ The initialization script creates a private `.env` and prints the local demo acc
 python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open **http://localhost:8000**. Enter the demo access code from Step 1 and press **Connect**. Submit the prefilled text. You should see:
+Open **http://localhost:8000** — you'll be redirected to **/signup** the first time. Create your organization (you become its first admin), which logs you in automatically. Submit the prefilled text. You should see:
 
 1. A `TEST INPUT` transcript line.
 2. One suggestion labeled `DEMO RULE`.
@@ -95,7 +105,7 @@ Then **restart** FastAPI so it loads the Chroma index from `data/chroma/`. The d
 
 If Chroma is missing or vector lookup fails, the app transparently falls back to **lexical-demo** retrieval. `GET /api/health` reports the configured retrieval mode. OpenAI failures do **not** silently impersonate AI responses; the UI displays an error.
 
-**Data note:** When using Deepgram or OpenAI APIs, snippets of audio/transcription/playbooks are transmitted to those vendors to provide their service. Review the providers' retention/privacy settings and your customer agreements before using real call data. The prototype itself does not save audio files or conversation transcripts to disk.
+**Data note:** When using Deepgram or OpenAI APIs, snippets of audio/transcription/playbooks are transmitted to those vendors to provide their service. Review the providers' retention/privacy settings and your customer agreements before using real call data. The app persists finalized transcript turns and generated hints (not raw audio) per call in the database, scoped to your organization — see **Call history** below.
 
 ## 5. Verify
 
@@ -111,13 +121,31 @@ node --check frontend/app.js
 node --check frontend/pcm-worklet.js
 ```
 
-You can also test the endpoint with `TestClient` (see `tests/test_end_to_end.py`), which exercises: demo access code -> signed token -> authenticated WebSocket -> simulated utterance -> retrieval -> hint message.
+You can also test the endpoint with `TestClient` (see `tests/test_end_to_end.py`), which exercises: signup -> signed token -> authenticated WebSocket -> simulated utterance -> retrieval -> hint message.
+
+## Accounts and teams
+
+- `POST /api/auth/signup` — `{ organization_name, name, email, password }`. Creates a new organization and its first `admin` user, and returns a session token.
+- `POST /api/auth/login` — `{ email, password }`. Returns a session token for an existing user (rate-limited to 10 attempts/minute/IP).
+- `GET /api/auth/me` — `Authorization: Bearer <token>`. Returns the caller's user/organization/role.
+- `POST /api/auth/invite` — admin-only. `{ name, email, password, role }` (`role` is `admin`, `manager`, or `rep`) adds a teammate to the caller's organization. There's no outbound email yet; share the password with the invitee directly.
+
+Session tokens are the same claims-based HMAC token described below, valid for `token_ttl_seconds` (12 hours by default), carrying `user_id`, `org_id`, and `role`.
+
+## Call history
+
+Every `/ws/live` session and Twilio call is persisted as a `Call` row (with its finalized `Turn`s and generated `Hint`s), scoped to the organization in the caller's token.
+
+- `GET /api/calls` — the caller's organization's most recent calls (summary: channel, start/end time, turn/hint counts).
+- `GET /api/calls/{id}` — full detail: every turn and hint for that call. 404s if the call belongs to a different organization.
+
+Outbound Twilio calls (`POST /api/twilio/call`) now require a session token and tag the resulting call with the caller's `org_id`/`rep_user_id` via a custom `<Stream><Parameter>` in the TwiML, read back from the Media Stream's `start` event. An inbound call that never goes through that flow (e.g. a bare webhook hit without those parameters) is not persisted — only transcribed/hinted live, same as before.
 
 ## WebSocket wire protocol
 
 ### Authenticate
 
-`POST /api/session` accepts `{ "access_code": "..." }` and returns a temporary signed token. The browser opens:
+Log in or sign up via the REST endpoints above to get a token, then open:
 
 ```javascript
 new WebSocket('ws://localhost:8000/ws/live', ['copilot-v1', `auth.${token}`]);
@@ -150,7 +178,7 @@ Using the subprotocol avoids placing credentials in URL query strings; it is **n
 - The backend **never sends interim fragments to the LLM**; only complete utterances trigger hint work.
 - The worker queue has **one pending slot**; new completed utterances replace stale queued work, while an active model call finishes. Hints are throttled to a minimum of **1.5 seconds between starts**.
 - Deepgram and the frontend share no API credentials. Deepgram frames are streamed through a separate backend WebSocket.
-- No transcript database, recording files, or historical memory beyond a small in-memory deque are created by this MVP.
+- No raw audio or recording files are ever persisted; only finalized transcript turns and generated hints are written to the database, per call. The in-memory deque is only a short rolling window used for prompting the LLM mid-call.
 
 ## Path to a true phone-call pilot
 
@@ -165,7 +193,7 @@ The microphone method is not a telephony tap. For live conversations with a remo
 ## Limitations / next improvements
 
 - No browser-based calling or remote participant audio capture.
-- Demo shared code is **local-developer authentication, not production identity management**. Use SSO, strict tenant isolation, separate secrets and rate limits for real sales teams.
+- Accounts now use real email/password + per-organization roles (`admin`/`manager`/`rep`), but there's no SSO/OAuth, password reset, or invite email yet — add those before a wider rollout.
 - Simple lexical fallback and rule-based demo are intentionally less sophisticated than vector RAG + LLM.
 - PDF/DOCX playbook parsing, document version approvals, source-level citations, multi-tenant indexing, redaction, sensitive-entity filters, vendor retention agreements and telemetry are not yet implemented.
 - Mobile browser behavior varies: active mic and WebSockets can be interrupted when the page is backgrounded, the device locks, or another app uses the microphone.

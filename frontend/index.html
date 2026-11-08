@@ -17,8 +17,9 @@
         <span>Sales<span class="brand-light">Copilot</span></span>
       </a>
       <div class="topbar-right">
-        <span class="micro-label">REAL-TIME ADVISOR / PROTOTYPE</span>
+        <span class="micro-label" id="org-label">REAL-TIME ADVISOR</span>
         <span class="state-pill" id="connection-pill"><span class="state-dot"></span><span id="connection-label">Offline</span></span>
+        <button class="button ghost" id="logout-btn">Log out</button>
       </div>
     </header>
 
@@ -80,9 +81,7 @@
         </div>
         <div class="control-columns">
           <div class="control-left">
-            <label for="access-code">Local demo access code</label>
             <div class="access-row">
-              <input id="access-code" type="password" autocomplete="off" placeholder="Paste the code printed by init_env.py" spellcheck="false">
               <button class="button secondary" id="connect-btn">Connect</button>
               <button class="button ghost" id="disconnect-btn" disabled>Disconnect</button>
             </div>

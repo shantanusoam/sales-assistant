@@ -6,20 +6,36 @@ from backend.app.config import Settings
 from backend.app.main import create_app
 
 
-def test_end_to_end_simulated_utterance():
+def test_end_to_end_simulated_utterance(tmp_sqlite_url):
     settings = replace(
         Settings(),
-        demo_access_code="super-secret-test-code",
         session_signing_key="a" * 64,
+        database_url=tmp_sqlite_url,
         deepgram_api_key="",
         openai_api_key="",
     )
     with TestClient(create_app(settings)) as client:
-        wrong = client.post("/api/session", json={"access_code": "bad"})
-        assert wrong.status_code == 401
-        response = client.post("/api/session", json={"access_code": settings.demo_access_code})
-        assert response.status_code == 200
-        token = response.json()["token"]
+        bad_login = client.post("/api/auth/login", json={"email": "nobody@example.com", "password": "whatever123"})
+        assert bad_login.status_code == 401
+
+        signup = client.post("/api/auth/signup", json={
+            "organization_name": "Acme Sales",
+            "name": "Ava Admin",
+            "email": "ava@acme.example",
+            "password": "correct horse battery",
+        })
+        assert signup.status_code == 200
+        token = signup.json()["token"]
+        assert signup.json()["role"] == "admin"
+
+        login = client.post("/api/auth/login", json={"email": "ava@acme.example", "password": "correct horse battery"})
+        assert login.status_code == 200
+        token = login.json()["token"]
+
+        me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert me.status_code == 200
+        assert me.json()["organization"]["name"] == "Acme Sales"
+
         with client.websocket_connect(
             "/ws/live",
             headers={"origin": "http://localhost:8000"},

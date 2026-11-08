@@ -6,31 +6,35 @@ import base64
 import json
 import logging
 import time
-from collections import defaultdict, deque
+from collections import deque
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 import struct
 from typing import Awaitable, Callable
 
 from urllib.parse import quote_plus
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from starlette.websockets import WebSocketDisconnect
 
 from .agent import HintAgent
-from .auth import check_access_code, extract_ws_token, issue_token, verify_token
+from .auth import extract_ws_token, verify_token
+from .auth_routes import build_auth_router
+from .calls_routes import build_calls_router
 from .config import ROOT, Settings
+from .db import create_all, make_db
 from .deepgram import DeepgramStream
+from .deps import build_current_claims_dependency
 from .knowledge import KnowledgeBase
+from .models import Call, Hint, Turn
 
 logger = logging.getLogger(__name__)
 FRONTEND = ROOT / "frontend"
-
-
-class SessionRequest(BaseModel):
-    access_code: str = Field(min_length=1, max_length=256)
 
 
 class OutboundCallRequest(BaseModel):
@@ -93,13 +97,24 @@ def _ulaw_8k_to_pcm16_16k_b64(ulaw_8k: bytes) -> tuple[str, float]:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings()
-    application = FastAPI(title="Sales Copilot MVP", docs_url=None, redoc_url=None)
+    engine, get_db, db_sessions = make_db(config)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        if config.database_url.startswith("sqlite"):
+            await create_all(engine)
+        yield
+        await engine.dispose()
+
+    application = FastAPI(title="Sales Copilot MVP", docs_url=None, redoc_url=None, lifespan=lifespan)
     application.mount("/assets", StaticFiles(directory=str(FRONTEND)), name="assets")
     knowledge = KnowledgeBase(config)
     agent = HintAgent(config)
-    failed_logins: dict[str, deque[float]] = defaultdict(deque)
     live_broadcasters: set[Callable[[dict], Awaitable[None]]] = set()
     twilio_outbound_senders: set[Callable[[bytes], Awaitable[None]]] = set()
+    require_auth = build_current_claims_dependency(config)
+    application.include_router(build_auth_router(config, get_db))
+    application.include_router(build_calls_router(get_db, require_auth))
 
     async def broadcast_to_dashboards(payload: dict) -> None:
         for sender in list(live_broadcasters):
@@ -119,11 +134,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def index() -> FileResponse:
         return FileResponse(FRONTEND / "index.html")
 
+    @application.get("/login")
+    async def login_page() -> FileResponse:
+        return FileResponse(FRONTEND / "login.html")
+
+    @application.get("/signup")
+    async def signup_page() -> FileResponse:
+        return FileResponse(FRONTEND / "signup.html")
+
     @application.get("/api/health")
     async def health() -> dict:
+        db_ok = True
+        try:
+            async for session in get_db():
+                await session.execute(select(1))
+        except Exception:
+            db_ok = False
         return {
             "ok": True,
-            "demo_auth_configured": config.configured,
+            "auth_configured": config.configured,
+            "database_ok": db_ok,
             "microphone_transcription_configured": bool(config.deepgram_api_key),
             "llm_configured": bool(config.openai_api_key),
             "twilio_configured": bool(config.twilio_account_sid and config.twilio_auth_token and config.twilio_phone_number),
@@ -133,7 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @application.post("/api/twilio/call")
-    async def start_outbound_call(request: Request, payload: OutboundCallRequest) -> dict:
+    async def start_outbound_call(request: Request, payload: OutboundCallRequest, claims: dict = Depends(require_auth)) -> dict:
         if not (config.twilio_account_sid and config.twilio_auth_token and config.twilio_phone_number):
             raise HTTPException(400, "Twilio credentials are not configured in .env.")
         raw_to = "".join(c for c in payload.to.strip() if c.isdigit() or c == "+")
@@ -156,13 +186,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if not base_url:
             raise HTTPException(400, "PUBLIC_BASE_URL is required in .env so Twilio can reach your local server.")
 
-        twiml_url = f"{base_url}/api/twilio/twiml"
+        twiml_params = {"org_id": claims["org_id"], "rep_user_id": claims["user_id"]}
         if payload.dial and payload.dial.strip():
             raw_dial = "".join(c for c in payload.dial.strip() if c.isdigit() or c == "+")
             if raw_dial and not raw_dial.startswith("+"):
                 raw_dial = f"+91{raw_dial}" if len(raw_dial) == 10 else f"+{raw_dial}"
             if raw_dial:
-                twiml_url = f"{twiml_url}?dial={quote_plus(raw_dial)}"
+                twiml_params["dial"] = raw_dial
+        twiml_url = f"{base_url}/api/twilio/twiml?" + "&".join(f"{k}={quote_plus(v)}" for k, v in twiml_params.items())
 
         twilio_api = f"https://api.twilio.com/2010-04-01/Accounts/{config.twilio_account_sid}/Calls.json"
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -191,6 +222,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def twilio_twiml(
         request: Request,
         dial: str | None = Query(default=None, description="Optional second number (+91...) to bridge"),
+        org_id: str | None = Query(default=None, description="Organization that owns this call, for persistence"),
+        rep_user_id: str | None = Query(default=None, description="Rep who placed this call, for persistence"),
     ) -> Response:
         """
         TwiML webhook for Twilio Voice calls. Starts a Twilio Media Stream (<Start><Stream>)
@@ -200,12 +233,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8765"
         ws_scheme = "ws" if host.startswith(("localhost", "127.0.0.1")) else "wss"
         ws_url = f"{ws_scheme}://{host}/ws/twilio-media"
+        stream_params = "".join(
+            f'<Parameter name="{name}" value="{value}" />'
+            for name, value in (("org_id", org_id), ("rep_user_id", rep_user_id)) if value
+        )
 
         if dial:
             xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Start>
-        <Stream name="sales-copilot" url="{ws_url}" track="both_tracks" />
+        <Stream name="sales-copilot" url="{ws_url}" track="both_tracks">{stream_params}</Stream>
     </Start>
     <Say>Sales Copilot is active. Connecting your call now.</Say>
     <Dial>
@@ -217,7 +254,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 <Response>
     <Say>Sales Copilot is connected. Speak your sales question or objection now, and watch your browser dashboard. Everything you say on the phone or in your browser microphone will also play back to your phone.</Say>
     <Connect>
-        <Stream name="sales-copilot" url="{ws_url}" />
+        <Stream name="sales-copilot" url="{ws_url}">{stream_params}</Stream>
     </Connect>
 </Response>"""
         return Response(content=xml, media_type="application/xml")
@@ -238,6 +275,56 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         call_sid: str = "twilio-call"
         stream_sid: str = ""
         ws_send_lock = asyncio.Lock()
+        db_call_id: str | None = None
+        turn_seq = 0
+
+        async def open_db_call(org_id: str | None, rep_user_id: str | None, twilio_call_sid: str) -> None:
+            nonlocal db_call_id
+            if not org_id:
+                return
+            async with db_sessions() as db:
+                call = Call(organization_id=org_id, rep_user_id=rep_user_id, channel="twilio", twilio_call_sid=twilio_call_sid)
+                db.add(call)
+                await db.commit()
+                db_call_id = call.id
+
+        async def record_db_turn(text: str, source: str) -> None:
+            nonlocal turn_seq
+            if not db_call_id:
+                return
+            seq, turn_seq = turn_seq, turn_seq + 1
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    db.add(Turn(call_id=db_call_id, seq=seq, source=source, text=text))
+                    await db.commit()
+
+            await asyncio.shield(_write())
+
+        async def record_db_hint(text: str, method: str, sources: list, processing_ms: int) -> None:
+            if not db_call_id:
+                return
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    db.add(Hint(call_id=db_call_id, text=text, method=method,
+                                 sources_json=json.dumps(sources), processing_ms=processing_ms))
+                    await db.commit()
+
+            await asyncio.shield(_write())
+
+        async def close_db_call() -> None:
+            if not db_call_id:
+                return
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    call = await db.get(Call, db_call_id)
+                    if call:
+                        call.ended_at = datetime.now(timezone.utc)
+                        await db.commit()
+
+            await asyncio.shield(_write())
 
         async def send_ulaw_to_phone(ulaw_bytes: bytes) -> None:
             if not stream_sid or not ulaw_bytes:
@@ -262,6 +349,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "text": normalized,
                 "source": track_source,
             })
+            await record_db_turn(normalized, track_source)
             history.append(normalized)
             if len(normalized) < 5 or normalized.casefold() == last_queued:
                 return
@@ -286,14 +374,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     started = time.perf_counter()
                     sources = await knowledge.retrieve(utterance)
                     hint, method = await agent.generate(utterance, list(history), sources)
+                    public_sources = [s.public() for s in sources]
+                    processing_ms = int((time.perf_counter() - started) * 1000)
                     await broadcast_to_dashboards({
                         "type": "hint",
                         "text": hint,
                         "method": method,
-                        "sources": [s.public() for s in sources],
+                        "sources": public_sources,
                         "retrieval_mode": knowledge.mode,
-                        "processing_ms": int((time.perf_counter() - started) * 1000),
+                        "processing_ms": processing_ms,
                     })
+                    await record_db_hint(hint, method, public_sources, processing_ms)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -340,6 +431,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     start_info = event.get("start", {})
                     call_sid = start_info.get("callSid", "twilio-call")
                     stream_sid = start_info.get("streamSid", "")
+                    custom_params = start_info.get("customParameters", {}) or {}
+                    await open_db_call(custom_params.get("org_id"), custom_params.get("rep_user_id"), call_sid)
                     await broadcast_to_dashboards({
                         "type": "status",
                         "message": f"Twilio phone call connected ({call_sid}) — two-way audio + live Deepgram transcription active!",
@@ -377,23 +470,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await asyncio.gather(*tasks, return_exceptions=True)
             for dg in streams.values():
                 await dg.close()
-
-    @application.post("/api/session")
-    async def session(request: Request, payload: SessionRequest) -> dict:
-        if not config.configured:
-            raise HTTPException(503, "Run python scripts/init_env.py before using the app.")
-        ip = request.client.host if request.client else "unknown"
-        attempts = failed_logins[ip]
-        now = time.monotonic()
-        while attempts and attempts[0] < now - 60:
-            attempts.popleft()
-        if len(attempts) >= 6:
-            raise HTTPException(429, "Too many attempts; try again later.")
-        if not check_access_code(payload.access_code, config):
-            attempts.append(now)
-            raise HTTPException(401, "Invalid access code.")
-        attempts.clear()
-        return {"token": issue_token(config), "expires_in": config.token_ttl_seconds}
+            await close_db_call()
 
     @application.websocket("/ws/live")
     async def live(ws: WebSocket) -> None:
@@ -402,7 +479,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await ws.close(code=1008, reason="Origin not allowed")
             return
         token = extract_ws_token(ws.headers.get("sec-websocket-protocol", ""))
-        if not verify_token(token, config):
+        claims = verify_token(token, config)
+        if not claims:
             await ws.close(code=1008, reason="Invalid or expired session token")
             return
         await ws.accept(subprotocol="copilot-v1")
@@ -413,12 +491,61 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         deepgram_listener: asyncio.Task | None = None
         deepgram_keepalive: asyncio.Task | None = None
         last_queued: str = ""
+        call_id: str | None = None
+        turn_seq = 0
+
+        async def open_call() -> None:
+            nonlocal call_id
+            async with db_sessions() as db:
+                call = Call(organization_id=claims["org_id"], rep_user_id=claims["user_id"], channel="browser")
+                db.add(call)
+                await db.commit()
+                call_id = call.id
+
+        async def record_turn(text: str, source: str) -> None:
+            nonlocal turn_seq
+            if not call_id:
+                return
+            seq, turn_seq = turn_seq, turn_seq + 1
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    db.add(Turn(call_id=call_id, seq=seq, source=source, text=text))
+                    await db.commit()
+
+            await asyncio.shield(_write())
+
+        async def record_hint(text: str, method: str, sources: list, processing_ms: int) -> None:
+            if not call_id:
+                return
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    db.add(Hint(call_id=call_id, text=text, method=method,
+                                 sources_json=json.dumps(sources), processing_ms=processing_ms))
+                    await db.commit()
+
+            await asyncio.shield(_write())
+
+        async def close_call() -> None:
+            if not call_id:
+                return
+
+            async def _write() -> None:
+                async with db_sessions() as db:
+                    call = await db.get(Call, call_id)
+                    if call:
+                        call.ended_at = datetime.now(timezone.utc)
+                        await db.commit()
+
+            await asyncio.shield(_write())
 
         async def send(payload: dict) -> None:
             async with send_lock:
                 await ws.send_json(payload)
 
         live_broadcasters.add(send)
+        await open_call()
 
         async def enqueue(text: str, source: str) -> None:
             nonlocal last_queued
@@ -426,6 +553,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not normalized:
                 return
             await send({"type": "transcript_final", "text": normalized, "source": source})
+            await record_turn(normalized, source)
             history.append(normalized)
             if len(normalized) < 5 or normalized.casefold() == last_queued:
                 return
@@ -450,14 +578,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     started = time.perf_counter()
                     sources = await knowledge.retrieve(utterance)
                     hint, method = await agent.generate(utterance, list(history), sources)
+                    public_sources = [s.public() for s in sources]
+                    processing_ms = int((time.perf_counter() - started) * 1000)
                     await send({
                         "type": "hint",
                         "text": hint,
                         "method": method,
-                        "sources": [s.public() for s in sources],
+                        "sources": public_sources,
                         "retrieval_mode": knowledge.mode,
-                        "processing_ms": int((time.perf_counter() - started) * 1000),
+                        "processing_ms": processing_ms,
                     })
+                    await record_hint(hint, method, public_sources, processing_ms)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:
@@ -564,6 +695,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await asyncio.gather(*(t for t in (worker, deepgram_listener, deepgram_keepalive) if t), return_exceptions=True)
             if deepgram:
                 await deepgram.close()
+            await close_call()
 
     return application
 

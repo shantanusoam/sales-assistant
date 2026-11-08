@@ -1,10 +1,16 @@
+import { requireSession, clearSession, apiFetch } from '/assets/api.js';
+
 const $ = (id) => document.getElementById(id);
+const session = requireSession();
 const state = {
-  ws: null, token: null, expiry: 0, microphoneEnabled: false, llmEnabled: false,
+  ws: null, microphoneEnabled: false, llmEnabled: false,
   stream: null, context: null, source: null, processor: null, sink: null,
   playbackCtx: null, nextPlayTime: 0,
   dropped: 0, hintCount: 0, startedAt: 0,
 };
+if (session) {
+  $('org-label').textContent = `${session.organization.name} · ${session.user.name}`;
+}
 
 function notice(message, type = '') {
   const el = $('notice');
@@ -29,8 +35,7 @@ function displayHealth(data) {
   }
   $('mode-indicator').textContent = (state.microphoneEnabled ? 'MIC READY' : 'TEXT TEST MODE') + ' / ' + (state.llmEnabled ? 'AI' : 'RULES DEMO');
   $('rag-mode').textContent = (data.retrieval_mode || 'lexical-demo').replace(/-/g, ' ').toUpperCase();
-  if (!data.demo_auth_configured) notice('Server demo credentials are missing. Run python scripts/init_env.py and restart the server.', 'error');
-  else if (!state.microphoneEnabled) notice('Text-test mode is ready. Add DEEPGRAM_API_KEY in .env for microphone transcription.');
+  if (!state.microphoneEnabled) notice('Text-test mode is ready. Add DEEPGRAM_API_KEY in .env for microphone transcription.');
   else notice('Microphone mode is available. Get consent from participants before processing any conversation.');
   setConnection(connected());
 }
@@ -41,27 +46,14 @@ async function health() {
     displayHealth(await res.json());
   } catch (error) { notice('Cannot reach the backend. Start FastAPI first.', 'error'); }
 }
-async function ensureToken() {
-  if (state.token && Date.now() < state.expiry - 15000) return state.token;
-  const accessCode = $('access-code').value;
-  if (!accessCode) throw new Error('Enter the demo access code shown by init_env.py.');
-  const response = await fetch('/api/session', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({access_code: accessCode}),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(typeof err.detail === 'string' ? err.detail : 'Authentication failed.');
-  }
-  const result = await response.json();
-  state.token = result.token;
-  state.expiry = Date.now() + result.expires_in * 1000;
-  $('access-code').value = '';
-  return state.token;
+function ensureToken() {
+  const current = requireSession();
+  if (!current) throw new Error('Your session expired. Log in again.');
+  return current.token;
 }
 async function connect() {
   if (connected()) return;
-  const token = await ensureToken();
+  const token = ensureToken();
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const address = `${protocol}//${location.host}/ws/live`;
   await new Promise((resolve, reject) => {
@@ -233,8 +225,13 @@ function sendTest() {
 function disconnect() {
   stopMicrophone(false);
   state.ws?.close(1000, 'Session ended');
-  state.ws = null; state.token = null; state.expiry = 0;
+  state.ws = null;
   setConnection(false);
+}
+function logout() {
+  disconnect();
+  clearSession();
+  window.location.href = '/login';
 }
 async function makeCall() {
   const input = $('call-number');
@@ -243,14 +240,14 @@ async function makeCall() {
   const btn = $('make-call-btn');
   if (btn) btn.disabled = true;
   try {
-    if (!connected() && $('access-code')?.value) {
+    if (!connected()) {
       await connect();
     }
     if (connected() && state.microphoneEnabled && !state.stream) {
       await startMicrophone().catch(() => {});
     }
     notice(`Dialing ${to} via Twilio...`, 'success');
-    const res = await fetch('/api/twilio/call', {
+    const res = await apiFetch('/api/twilio/call', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({to}),
@@ -277,6 +274,7 @@ bind('start-mic', startMicrophone);
 bind('stop-mic', stopMicrophone);
 bind('send-test', sendTest);
 bind('make-call-btn', makeCall);
+bind('logout-btn', logout);
 setInterval(() => {
   if (!connected()) return;
   const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);

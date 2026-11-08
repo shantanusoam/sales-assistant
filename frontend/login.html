@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1829">
+  <title>Log in | Sales Copilot</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/login.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Sales Copilot home">
+        <span class="brand-logo" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>Sales<span class="brand-light">Copilot</span></span>
+      </a>
+    </header>
+    <main class="main auth-shell">
+      <section class="panel auth-card" aria-label="Log in">
+        <div class="panel-head"><div class="title-group"><span class="section-mark mark-blue"></span>
+          <div><h2>Log in</h2><p>Access your team's live call dashboard</p></div></div>
+        </div>
+        <form id="login-form">
+          <label for="email">Work email</label>
+          <input id="email" type="email" autocomplete="email" required>
+          <label for="password" style="margin-top:12px;display:block;">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+          <button class="button primary" type="submit" style="margin-top:16px;width:100%;">Log in</button>
+        </form>
+        <div id="notice" class="notice" role="status" aria-live="polite"></div>
+        <p class="small-print">No account? <a href="/signup">Create your organization</a>.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
