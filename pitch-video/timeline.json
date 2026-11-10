@@ -1,0 +1,893 @@
+{
+  "meta": {
+    "w": 1920,
+    "h": 1080,
+    "fps": 30,
+    "dur": 47.5,
+    "clock": "voice",
+    "register": "clean",
+    "loop": false,
+    "bpm": null,
+    "meter": "4/4",
+    "bars": null,
+    "t0": 0.0,
+    "songOffset": 0.0,
+    "grid": "none",
+    "hookWaiver": null,
+    "vo": {
+      "status": "RENDERED",
+      "file": "audio/vo_track.wav",
+      "rateWps": 2.35
+    }
+  },
+  "objects": [
+    {
+      "id": "copilot_hub",
+      "role": "constant",
+      "what": "Central SalesCopilot 3-bar brain node and Bento frame"
+    },
+    {
+      "id": "postcall_card",
+      "role": "hero",
+      "what": "One-page post-call coaching score and distribution Bento card"
+    }
+  ],
+  "vo": [
+    {
+      "id": "L1",
+      "text": "SalesCopilot turns every live sales call into a guided win. Scattered tools converge into one real-time brain.",
+      "from": 0.15,
+      "to": 7.58,
+      "words": [
+        {
+          "w": "SalesCopilot",
+          "t": 0.15
+        },
+        {
+          "w": "turns",
+          "t": 1.067
+        },
+        {
+          "w": "every",
+          "t": 1.427
+        },
+        {
+          "w": "live",
+          "t": 1.764
+        },
+        {
+          "w": "sales",
+          "t": 2.054
+        },
+        {
+          "w": "call",
+          "t": 2.368
+        },
+        {
+          "w": "into",
+          "t": 2.611
+        },
+        {
+          "w": "a",
+          "t": 2.844
+        },
+        {
+          "w": "guided",
+          "t": 2.96
+        },
+        {
+          "w": "win.",
+          "t": 3.366
+        },
+        {
+          "w": "Scattered",
+          "t": 4.248
+        },
+        {
+          "w": "tools",
+          "t": 4.724
+        },
+        {
+          "w": "converge",
+          "t": 5.119
+        },
+        {
+          "w": "into",
+          "t": 5.642
+        },
+        {
+          "w": "one",
+          "t": 5.978
+        },
+        {
+          "w": "real-time",
+          "t": 6.28
+        },
+        {
+          "w": "brain.",
+          "t": 6.826
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "text": "Stream browser mic or Twilio calls through Deepgram and Sarvam AI. Playbook RAG grounds every answer in your approved docs.",
+      "from": 8.1,
+      "to": 16.041,
+      "words": [
+        {
+          "w": "Stream",
+          "t": 8.1
+        },
+        {
+          "w": "browser",
+          "t": 8.472
+        },
+        {
+          "w": "mic",
+          "t": 8.855
+        },
+        {
+          "w": "or",
+          "t": 9.087
+        },
+        {
+          "w": "Twilio",
+          "t": 9.215
+        },
+        {
+          "w": "calls",
+          "t": 9.795
+        },
+        {
+          "w": "through",
+          "t": 10.062
+        },
+        {
+          "w": "Deepgram",
+          "t": 10.387
+        },
+        {
+          "w": "and",
+          "t": 10.956
+        },
+        {
+          "w": "Sarvam",
+          "t": 11.107
+        },
+        {
+          "w": "AI.",
+          "t": 11.606
+        },
+        {
+          "w": "Playbook",
+          "t": 12.732
+        },
+        {
+          "w": "RAG",
+          "t": 13.208
+        },
+        {
+          "w": "grounds",
+          "t": 13.487
+        },
+        {
+          "w": "every",
+          "t": 13.963
+        },
+        {
+          "w": "answer",
+          "t": 14.288
+        },
+        {
+          "w": "in",
+          "t": 14.602
+        },
+        {
+          "w": "your",
+          "t": 14.706
+        },
+        {
+          "w": "approved",
+          "t": 14.869
+        },
+        {
+          "w": "docs.",
+          "t": 15.275
+        }
+      ]
+    },
+    {
+      "id": "L3",
+      "text": "Confirm consent, click connect, and speak in English or Hinglish. Watch objections, talk-time, and your next best line appear live.",
+      "from": 16.5,
+      "to": 24.302,
+      "words": [
+        {
+          "w": "Confirm",
+          "t": 16.5
+        },
+        {
+          "w": "consent,",
+          "t": 17.022
+        },
+        {
+          "w": "click",
+          "t": 17.626
+        },
+        {
+          "w": "connect,",
+          "t": 17.893
+        },
+        {
+          "w": "and",
+          "t": 18.323
+        },
+        {
+          "w": "speak",
+          "t": 18.474
+        },
+        {
+          "w": "in",
+          "t": 18.764
+        },
+        {
+          "w": "English",
+          "t": 18.868
+        },
+        {
+          "w": "or",
+          "t": 19.228
+        },
+        {
+          "w": "Hinglish.",
+          "t": 19.391
+        },
+        {
+          "w": "Watch",
+          "t": 20.494
+        },
+        {
+          "w": "objections,",
+          "t": 20.796
+        },
+        {
+          "w": "talk-time,",
+          "t": 21.504
+        },
+        {
+          "w": "and",
+          "t": 22.166
+        },
+        {
+          "w": "your",
+          "t": 22.293
+        },
+        {
+          "w": "next",
+          "t": 22.456
+        },
+        {
+          "w": "best",
+          "t": 22.711
+        },
+        {
+          "w": "line",
+          "t": 23.002
+        },
+        {
+          "w": "appear",
+          "t": 23.303
+        },
+        {
+          "w": "live.",
+          "t": 23.629
+        }
+      ]
+    },
+    {
+      "id": "L4",
+      "text": "In the field, run the mobile app or PWA with floating call hints. DPDP Consent gates every external share by design.",
+      "from": 24.8,
+      "to": 32.881,
+      "words": [
+        {
+          "w": "In",
+          "t": 24.8
+        },
+        {
+          "w": "the",
+          "t": 24.986
+        },
+        {
+          "w": "field,",
+          "t": 25.113
+        },
+        {
+          "w": "run",
+          "t": 25.497
+        },
+        {
+          "w": "the",
+          "t": 25.694
+        },
+        {
+          "w": "mobile",
+          "t": 25.81
+        },
+        {
+          "w": "app",
+          "t": 26.182
+        },
+        {
+          "w": "or",
+          "t": 26.437
+        },
+        {
+          "w": "PWA",
+          "t": 26.623
+        },
+        {
+          "w": "with",
+          "t": 27.343
+        },
+        {
+          "w": "floating",
+          "t": 27.563
+        },
+        {
+          "w": "call",
+          "t": 28.016
+        },
+        {
+          "w": "hints.",
+          "t": 28.318
+        },
+        {
+          "w": "DPDP",
+          "t": 29.142
+        },
+        {
+          "w": "Consent",
+          "t": 29.943
+        },
+        {
+          "w": "gates",
+          "t": 30.373
+        },
+        {
+          "w": "every",
+          "t": 30.814
+        },
+        {
+          "w": "external",
+          "t": 31.139
+        },
+        {
+          "w": "share",
+          "t": 31.615
+        },
+        {
+          "w": "by",
+          "t": 31.87
+        },
+        {
+          "w": "design.",
+          "t": 32.045
+        }
+      ]
+    },
+    {
+      "id": "L5",
+      "text": "When the call ends, coaching scores, summaries, and follow-up drafts route straight to WhatsApp, HubSpot, and webhooks.",
+      "from": 33.85,
+      "to": 40.073,
+      "words": [
+        {
+          "w": "When",
+          "t": 33.85
+        },
+        {
+          "w": "the",
+          "t": 34.082
+        },
+        {
+          "w": "call",
+          "t": 34.187
+        },
+        {
+          "w": "ends,",
+          "t": 34.512
+        },
+        {
+          "w": "coaching",
+          "t": 34.872
+        },
+        {
+          "w": "scores,",
+          "t": 35.29
+        },
+        {
+          "w": "summaries,",
+          "t": 35.708
+        },
+        {
+          "w": "and",
+          "t": 36.23
+        },
+        {
+          "w": "follow-up",
+          "t": 36.451
+        },
+        {
+          "w": "drafts",
+          "t": 36.915
+        },
+        {
+          "w": "route",
+          "t": 37.287
+        },
+        {
+          "w": "straight",
+          "t": 37.519
+        },
+        {
+          "w": "to",
+          "t": 37.821
+        },
+        {
+          "w": "WhatsApp,",
+          "t": 37.948
+        },
+        {
+          "w": "HubSpot,",
+          "t": 38.529
+        },
+        {
+          "w": "and",
+          "t": 39.051
+        },
+        {
+          "w": "webhooks.",
+          "t": 39.191
+        }
+      ]
+    },
+    {
+      "id": "L6",
+      "text": "SalesCopilot. Put your best sales trainer on every call, starting day one.",
+      "from": 40.5,
+      "to": 45.748,
+      "words": [
+        {
+          "w": "SalesCopilot.",
+          "t": 40.5
+        },
+        {
+          "w": "Put",
+          "t": 42.416
+        },
+        {
+          "w": "your",
+          "t": 42.648
+        },
+        {
+          "w": "best",
+          "t": 42.857
+        },
+        {
+          "w": "sales",
+          "t": 43.112
+        },
+        {
+          "w": "trainer",
+          "t": 43.414
+        },
+        {
+          "w": "on",
+          "t": 43.751
+        },
+        {
+          "w": "every",
+          "t": 43.867
+        },
+        {
+          "w": "call,",
+          "t": 44.111
+        },
+        {
+          "w": "starting",
+          "t": 44.447
+        },
+        {
+          "w": "day",
+          "t": 44.877
+        },
+        {
+          "w": "one.",
+          "t": 45.132
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1_converge",
+      "start": 0.0,
+      "end": 7.9,
+      "beats": {
+        "hook_ready": 0.0,
+        "nodes_launch": 1.2,
+        "converge_lock": 5.1
+      },
+      "cueRef": {
+        "converge_lock": "L1.converge"
+      },
+      "reads": [
+        {
+          "what": "Hook headline and CTA on frame 0",
+          "from": 0.0,
+          "to": 3.6
+        },
+        {
+          "what": "8 scattered sales nodes converge into SalesCopilot brain",
+          "from": 3.8,
+          "to": 7.7
+        }
+      ],
+      "transitionOut": {
+        "type": "cut",
+        "dur": 0.0,
+        "why": "Zoom inside the central brain node to reveal the 4-stage live architecture",
+        "bridge": "copilot_hub"
+      }
+    },
+    {
+      "id": "s2_arch",
+      "start": 7.9,
+      "end": 16.3,
+      "beats": {
+        "canvas_open": 8.1,
+        "stt_nodes": 10.4,
+        "rag_lock": 12.7
+      },
+      "cueRef": {
+        "rag_lock": "L2.Playbook"
+      },
+      "reads": [
+        {
+          "what": "Audio streams into Deepgram and Sarvam AI saaras:v3",
+          "from": 8.2,
+          "to": 12.2
+        },
+        {
+          "what": "Playbook RAG grounds every answer in approved docs",
+          "from": 12.4,
+          "to": 16.1
+        }
+      ],
+      "transitionOut": {
+        "type": "cut",
+        "dur": 0.0,
+        "why": "Step from system architecture into the live rep Bento UI",
+        "bridge": "copilot_hub"
+      }
+    },
+    {
+      "id": "s3_bento",
+      "start": 16.3,
+      "end": 24.6,
+      "beats": {
+        "cursor_consent": 17.0,
+        "cursor_connect": 17.9,
+        "hinglish_turn": 19.4,
+        "hint_illuminate": 21.8
+      },
+      "cueRef": {
+        "cursor_connect": "L3.click",
+        "hint_illuminate": "L3.next"
+      },
+      "reads": [
+        {
+          "what": "Automated cursor clicks Consent and Connect, Hinglish utterance arrives",
+          "from": 16.6,
+          "to": 20.8
+        },
+        {
+          "what": "Live objection flag, talk-time bar, and grounded teal hint appear",
+          "from": 21.0,
+          "to": 24.4
+        }
+      ],
+      "transitionOut": {
+        "type": "cut",
+        "dur": 0.0,
+        "why": "High-contrast white flip to highlight mobile field hardware and DPDP Consent",
+        "bridge": "copilot_hub"
+      }
+    },
+    {
+      "id": "s4_white_mobile",
+      "start": 24.6,
+      "end": 33.6,
+      "beats": {
+        "white_flip": 24.6,
+        "floating_hud": 27.5,
+        "dpdp_gate": 29.1,
+        "pre_payoff_silence": 33.0
+      },
+      "cueRef": {
+        "floating_hud": "L4.floating",
+        "dpdp_gate": "L4.DPDP"
+      },
+      "reads": [
+        {
+          "what": "Mobile React Native and PWA phone frame with Floating Call Hint HUD",
+          "from": 24.9,
+          "to": 28.8
+        },
+        {
+          "what": "DPDP Consent gate and Wake-Lock field mode",
+          "from": 29.0,
+          "to": 32.9
+        }
+      ],
+      "transitionOut": {
+        "type": "cut",
+        "dur": 0.0,
+        "why": "Hard cut out of 0.6s silence into the dark post-call payoff hub",
+        "bridge": "postcall_card"
+      }
+    },
+    {
+      "id": "s5_payoff",
+      "start": 33.6,
+      "end": 40.3,
+      "beats": {
+        "payoff_slam": 33.7,
+        "score_landed": 35.3,
+        "hub_pulses": 37.5
+      },
+      "cueRef": {
+        "score_landed": "L5.scores,",
+        "hub_pulses": "L5.WhatsApp,"
+      },
+      "reads": [
+        {
+          "what": "Post-call summary card lands with 85/100 coaching score and Interested tag",
+          "from": 33.8,
+          "to": 37.2
+        },
+        {
+          "what": "Simultaneous signed pulses route to WhatsApp, HubSpot CRM, and Webhooks",
+          "from": 37.3,
+          "to": 40.1
+        }
+      ],
+      "transitionOut": {
+        "type": "cut",
+        "dur": 0.0,
+        "why": "Resolve from distribution hub to the closing poster frame",
+        "bridge": "copilot_hub"
+      }
+    },
+    {
+      "id": "s6_close",
+      "start": 40.3,
+      "end": 47.5,
+      "beats": {
+        "poster_in": 40.5,
+        "day_one": 44.4,
+        "poster_hold": 45.2
+      },
+      "cueRef": {
+        "day_one": "L6.starting"
+      },
+      "reads": [
+        {
+          "what": "Closing thesis and CTA held still as poster frame",
+          "from": 40.5,
+          "to": 47.4
+        }
+      ]
+    }
+  ],
+  "reads": [],
+  "cuts": [
+    7.9,
+    16.3,
+    24.6,
+    33.6,
+    40.3
+  ],
+  "hero": {
+    "t": 33.7,
+    "what": "Post-call Bento card slams in after 0.6s silence and fires simultaneous pulses to WhatsApp, HubSpot CRM, and Webhooks"
+  },
+  "silences": [
+    {
+      "from": 33.0,
+      "to": 33.6
+    }
+  ],
+  "sfx": [
+    {
+      "at": "s1_converge.nodes_launch",
+      "offset": 0.0,
+      "src": "whoosh_soft",
+      "gain": 0.16,
+      "why": "Scattered tool nodes begin converging along bezier paths"
+    },
+    {
+      "at": "s1_converge.converge_lock",
+      "offset": 0.0,
+      "src": "click_lock",
+      "gain": 0.22,
+      "why": "Nodes lock into central SalesCopilot brain"
+    },
+    {
+      "at": "s2_arch.canvas_open",
+      "offset": 0.0,
+      "src": "whoosh_pan",
+      "gain": 0.15,
+      "why": "Camera pans into infinite-canvas architecture"
+    },
+    {
+      "at": "s2_arch.rag_lock",
+      "offset": 0.0,
+      "src": "chime_rag",
+      "gain": 0.2,
+      "why": "Playbook RAG node illuminates"
+    },
+    {
+      "at": "s3_bento.cursor_consent",
+      "offset": 0.0,
+      "src": "click_ui",
+      "gain": 0.22,
+      "why": "Automated cursor checks consent box"
+    },
+    {
+      "at": "s3_bento.cursor_connect",
+      "offset": 0.0,
+      "src": "click_ui_2",
+      "gain": 0.2,
+      "why": "Automated cursor clicks connect"
+    },
+    {
+      "at": "s3_bento.hint_illuminate",
+      "offset": 0.0,
+      "src": "pop_hint",
+      "gain": 0.24,
+      "why": "Grounded AI hint illuminates in teal"
+    },
+    {
+      "at": "s4_white_mobile.white_flip",
+      "offset": 0.0,
+      "src": "snap_flip",
+      "gain": 0.24,
+      "why": "High-contrast white stage flip for mobile hardware"
+    },
+    {
+      "at": "s4_white_mobile.dpdp_gate",
+      "offset": 0.0,
+      "src": "click_lock",
+      "gain": 0.2,
+      "why": "DPDP Consent shield locks"
+    },
+    {
+      "at": "s5_payoff.payoff_slam",
+      "offset": 0.0,
+      "src": "impact_payoff",
+      "gain": 0.35,
+      "why": "Payoff hero slam immediately after 0.6s silence"
+    },
+    {
+      "at": "s5_payoff.hub_pulses",
+      "offset": 0.0,
+      "src": "chime_resolve",
+      "gain": 0.22,
+      "why": "Outbound distribution pulses arrive at WhatsApp, CRM, and Webhook nodes"
+    }
+  ],
+  "captions": [
+    {
+      "from": 0.15,
+      "to": 7.58,
+      "text": "SalesCopilot turns every live sales call into a guided win. Scattered tools converge into one real-time brain.",
+      "src": "vo:L1"
+    },
+    {
+      "from": 8.1,
+      "to": 16.041,
+      "text": "Stream browser mic or Twilio calls through Deepgram and Sarvam AI. Playbook RAG grounds every answer in your approved docs.",
+      "src": "vo:L2"
+    },
+    {
+      "from": 16.5,
+      "to": 24.302,
+      "text": "Confirm consent, click connect, and speak in English or Hinglish. Watch objections, talk-time, and your next best line appear live.",
+      "src": "vo:L3"
+    },
+    {
+      "from": 24.8,
+      "to": 32.881,
+      "text": "In the field, run the mobile app or PWA with floating call hints. DPDP Consent gates every external share by design.",
+      "src": "vo:L4"
+    },
+    {
+      "from": 33.85,
+      "to": 40.073,
+      "text": "When the call ends, coaching scores, summaries, and follow-up drafts route straight to WhatsApp, HubSpot, and webhooks.",
+      "src": "vo:L5"
+    },
+    {
+      "from": 40.5,
+      "to": 45.748,
+      "text": "SalesCopilot. Put your best sales trainer on every call, starting day one.",
+      "src": "vo:L6"
+    }
+  ],
+  "texts": [
+    {
+      "id": "hook_headline",
+      "text": "SalesCopilot: Live AI for Calls",
+      "from": 0.0,
+      "to": 3.6,
+      "role": "hook",
+      "px": 92,
+      "box": [
+        140,
+        74,
+        1640,
+        118
+      ]
+    },
+    {
+      "id": "cta_opening",
+      "text": "Web \u00b7 Twilio \u00b7 Mobile",
+      "from": 0.0,
+      "to": 3.6,
+      "role": "cta",
+      "px": 52,
+      "box": [
+        140,
+        206,
+        900,
+        68
+      ]
+    },
+    {
+      "id": "term_playbook_rag",
+      "text": "Playbook RAG",
+      "from": 12.4,
+      "to": 16.1,
+      "role": "term",
+      "px": 56,
+      "box": [
+        1320,
+        64,
+        460,
+        74
+      ]
+    },
+    {
+      "id": "term_dpdp_consent",
+      "text": "DPDP Consent",
+      "from": 29.0,
+      "to": 32.9,
+      "role": "term",
+      "px": 56,
+      "box": [
+        1320,
+        64,
+        460,
+        74
+      ]
+    }
+  ],
+  "terms": [
+    "SalesCopilot",
+    "Playbook RAG",
+    "DPDP Consent"
+  ]
+}

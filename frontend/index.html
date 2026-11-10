@@ -3,9 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0c1829">
+  <meta name="theme-color" content="#0a1420">
   <meta name="description" content="Real-time sales copilot prototype, with local test mode and live microphone transcription.">
   <title>Live Sales Copilot | MVP</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SalesCopilot">
   <link rel="stylesheet" href="/assets/style.css">
   <script type="module" src="/assets/app.js"></script>
 </head>
@@ -16,23 +23,41 @@
         <span class="brand-logo" aria-hidden="true"><span></span><span></span><span></span></span>
         <span>Sales<span class="brand-light">Copilot</span></span>
       </a>
+      <nav class="topbar-nav" aria-label="Primary">
+        <a href="/" class="active">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
+          Live call
+        </a>
+        <a href="/history">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Call history
+        </a>
+        <a href="/settings">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+          Settings
+        </a>
+      </nav>
       <div class="topbar-right">
-        <span class="micro-label" id="org-label">REAL-TIME ADVISOR</span>
+        <span class="org-chip" id="org-chip"></span>
         <span class="state-pill" id="connection-pill"><span class="state-dot"></span><span id="connection-label">Offline</span></span>
-        <button class="button ghost" id="logout-btn">Log out</button>
+        <button class="button ghost" id="logout-btn" aria-label="Log out">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          <span class="btn-label">Log out</span>
+        </button>
       </div>
     </header>
 
     <main class="main">
       <div class="page-heading">
-        <div><div class="eyebrow">CONVERSATION INTELLIGENCE</div>
-          <h1>Know what to say <span>next.</span></h1>
+        <div>
+          <h1 class="h-xl">Know what to say <span style="color:var(--teal)">next.</span></h1>
           <p>Turn the conversation into timely, grounded sales guidance.</p>
         </div>
-        <div class="live-clock"><span id="session-timer">00:00</span><small>SESSION TIME</small></div>
+        <div class="live-clock"><span id="session-timer">00:00</span><small id="session-timer-label">Session time</small></div>
       </div>
 
-      <div class="mode-note" role="note"><span class="info-icon">i</span>
+      <div class="mode-note" role="note">
+        <span class="info-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg></span>
         <div><strong>Microphone-only prototype.</strong> It hears your local microphone, not the remote side of a mobile carrier call. Use a consented telephony/media-stream integration to capture both speakers.</div>
       </div>
 
@@ -43,14 +68,17 @@
             <span class="head-tag" id="transcript-mode">MIC / TEST INPUT</span>
           </div>
           <div class="audio-strip">
-            <span class="wave-icon" aria-hidden="true">◉</span><span id="audio-state">Waiting for input</span>
+            <span class="wave-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M2 12h3l2-7 4 14 3-10 2 5h6"/></svg></span>
+            <span id="audio-state">Waiting for input</span>
             <div class="levels" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
           <div class="transcript-feed" id="transcript-feed" aria-live="polite" aria-relevant="additions">
             <div class="empty-state" id="transcript-empty">
-              <div class="empty-art">“</div>
-              <h3>Your conversation starts here</h3>
-              <p>Connect, enter a test utterance, or activate your microphone once Deepgram is configured.</p>
+              <div class="empty-art" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2L21 20l-4.3-1.1a8.5 8.5 0 1 1 4.3-7.4Z"/></svg></div>
+              <div>
+                <h3>Your conversation starts here</h3>
+                <p>Connect, enter a test utterance, or activate your microphone once Deepgram is configured.</p>
+              </div>
             </div>
           </div>
           <div class="interim" id="interim" aria-live="off"></div>
@@ -62,7 +90,10 @@
             <span class="head-tag">LIVE STRATEGY</span>
           </div>
           <div class="primary-insight" id="insight-area">
-            <div class="insight-kicker"><span class="sparkle">✦</span> COPILOT SUGGESTION <span id="ai-badge" class="insight-model">READY</span></div>
+            <div class="insight-kicker">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 2c0 4-2 6-2 6s2 2 2 6c0-4 2-6 2-6s-2-2-2-6Z"/><path d="M19 15c0 1.5-1 2.5-1 2.5s1 1 1 2.5c0-1.5 1-2.5 1-2.5s-1-1-1-2.5Z"/></svg>
+              Copilot suggestion <span id="ai-badge" class="insight-model">READY</span>
+            </div>
             <p class="insight-text" id="hint-text">A relevant sales hint will appear here after each complete utterance.</p>
             <div class="insight-footer"><span id="latency">Based on your playbook</span><span id="hint-counter">0 hints</span></div>
           </div>
@@ -70,42 +101,96 @@
           <div class="references" id="source-list">
             <div class="source-placeholder">Reference excerpts used to ground the guidance will appear here.</div>
           </div>
+          <div class="hint-history-head" id="hint-history-head" hidden>Earlier this call</div>
+          <div class="hint-history" id="hint-history"></div>
           <div class="small-print">Recommendations are advisory. Verify customer-specific claims, pricing, and approved policies before responding.</div>
         </section>
       </div>
+
+      <section class="panel signals-panel" aria-label="Conversation signals">
+        <div class="panel-head">
+          <div class="title-group"><span class="section-mark mark-blue"></span><div><h2>Conversation signals</h2><p>Live talk-time, sentiment, and objections this call</p></div></div>
+        </div>
+        <div class="signals-row">
+          <div class="signal-block">
+            <span class="signal-label">Talk time</span>
+            <div class="talk-bar"><div class="talk-bar-rep" id="talk-bar-rep" style="width:0%"></div></div>
+            <div class="talk-bar-legend"><span>Rep <b id="talk-rep-pct">0%</b></span><span>Customer <b id="talk-customer-pct">0%</b></span></div>
+          </div>
+          <div class="signal-block">
+            <span class="signal-label">Sentiment</span>
+            <div class="sentiment-chips">
+              <span class="chip chip-positive">Positive <b id="sent-positive">0</b></span>
+              <span class="chip chip-neutral">Neutral <b id="sent-neutral">0</b></span>
+              <span class="chip chip-negative">Negative <b id="sent-negative">0</b></span>
+            </div>
+          </div>
+          <div class="signal-block">
+            <span class="signal-label">Objections flagged</span>
+            <div class="signal-big-number" id="objection-count">0</div>
+          </div>
+        </div>
+      </section>
 
       <section class="panel controls-panel" aria-label="Capture and testing controls">
         <div class="panel-head control-heading">
           <div class="title-group"><span class="section-mark mark-orange"></span><div><h2>Session controls</h2><p>Run an end-to-end text test, or stream real microphone audio</p></div></div>
           <span id="mode-indicator" class="mode-indicator">Checking setup…</span>
         </div>
+        <div class="consent-row">
+          <label for="consent-checkbox">
+            <input type="checkbox" id="consent-checkbox">
+            I've informed the other party this call is analyzed for sales coaching, and have their consent.
+          </label>
+        </div>
         <div class="control-columns">
           <div class="control-left">
             <div class="access-row">
-              <button class="button secondary" id="connect-btn">Connect</button>
+              <button class="button secondary" id="connect-btn" disabled>Connect</button>
               <button class="button ghost" id="disconnect-btn" disabled>Disconnect</button>
             </div>
             <div class="microphone-controls">
-              <button class="button primary" id="start-mic" disabled><span class="mic-symbol">●</span> Start microphone</button>
+              <button class="button primary" id="start-mic" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
+                Start microphone
+              </button>
               <button class="button ghost" id="stop-mic" disabled>Stop microphone</button>
               <span class="field-hint" id="mic-helper">Requires Deepgram and microphone permission.</span>
             </div>
-            <label for="call-number" style="margin-top: 14px; display: block;">Call phone number via Twilio</label>
+            <label for="call-number" style="margin-top: 16px; display: block;">Call phone number via Twilio</label>
             <div class="access-row">
               <input id="call-number" type="tel" autocomplete="tel" placeholder="+917520850690 or 10-digit Indian mobile" value="+917520850690" spellcheck="false">
-              <button class="button primary" id="make-call-btn">📞 Call Phone</button>
+              <button class="button primary" id="make-call-btn" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 2.5a11 11 0 0 0 5 5L14 14l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg>
+                Call phone
+              </button>
             </div>
             <span class="field-hint" id="call-helper">Streams two-way phone audio into Deepgram &amp; Copilot hints.</span>
           </div>
           <div class="control-right">
-            <label for="test-text">Test a sales conversation without audio</label>
+            <div class="sim-head-row">
+              <label for="test-text" style="margin-bottom:0;">Test a sales conversation without audio</label>
+              <div class="speaker-switch" role="group" aria-label="Simulated speaker">
+                <button type="button" class="speaker-btn active" data-speaker="customer" id="speaker-customer">Customer</button>
+                <button type="button" class="speaker-btn" data-speaker="rep" id="speaker-rep">Rep</button>
+              </div>
+            </div>
+            <div class="scenario-row" aria-label="Quick scenario presets">
+              <button type="button" class="scenario-chip" data-speaker="customer" data-text="Your solution seems expensive. We already manage customer inquiries using Excel.">Pricing objection</button>
+              <button type="button" class="scenario-chip" data-speaker="customer" data-text="आपका solution थोड़ा expensive लग रहा है, अभी हमारा budget tight है।">Hinglish budget</button>
+              <button type="button" class="scenario-chip" data-speaker="rep" data-text="How does your team currently track missed follow-ups, and what happens when a lead slips?">Rep discovery</button>
+              <button type="button" class="scenario-chip" data-speaker="customer" data-text="Can this integrate two-way with our existing HubSpot CRM and internal ERP?">Integration ask</button>
+              <button type="button" class="scenario-chip" data-speaker="customer" data-text="This sounds good and makes sense for our team — when can we start onboarding?">Buying signal</button>
+            </div>
             <textarea id="test-text" maxlength="700" rows="2" placeholder="Example: Your solution seems expensive. We already manage customer inquiries using Excel.">Your solution seems expensive. We already manage customer inquiries using Excel.</textarea>
-            <div class="send-row"><span class="field-hint">Simulated input. Not AI speech-to-text.</span><button class="button secondary" id="send-test" disabled>Generate suggestion <span aria-hidden="true">↗</span></button></div>
+            <div class="send-row"><span class="field-hint">Simulated input. Not AI speech-to-text.</span>
+              <button class="button secondary" id="send-test" disabled>Generate suggestion</button>
+            </div>
           </div>
         </div>
-        <div id="notice" class="notice" role="status" aria-live="polite">Open this page on localhost or HTTPS to use the microphone.</div>
+        <div id="notice" class="notice" role="status" aria-live="polite"></div>
       </section>
-      <footer class="footer"><span>SALES COPILOT / DEVELOPMENT MVP</span><span>Audio is processed in memory; no recording file is created by this application.</span></footer>
+      <footer class="footer"><span>SALES COPILOT / DEVELOPMENT MVP</span><span>Audio is processed in memory; finalized transcripts and hints are saved to your organization's call history.</span></footer>
     </main>
   </div>
 </body>

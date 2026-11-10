@@ -3,8 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0c1829">
+  <meta name="theme-color" content="#0a1420">
   <title>Create your organization | Sales Copilot</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SalesCopilot">
   <link rel="stylesheet" href="/assets/style.css">
   <script type="module" src="/assets/signup.js"></script>
 </head>
@@ -16,27 +23,60 @@
         <span>Sales<span class="brand-light">Copilot</span></span>
       </a>
     </header>
-    <main class="main auth-shell">
-      <section class="panel auth-card" aria-label="Create your organization">
-        <div class="panel-head"><div class="title-group"><span class="section-mark mark-teal"></span>
-          <div><h2>Create your organization</h2><p>You'll become the first admin</p></div></div>
+    <div class="auth-shell">
+      <section class="auth-pitch">
+        <h1 class="h-xl">Put your best sales trainer on every call.</h1>
+        <p>Set up your organization in a minute. You'll be the first admin, and can invite your team once you're in.</p>
+        <div class="auth-points">
+          <div class="auth-point">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            New reps sell like veterans from day one.
+          </div>
+          <div class="auth-point">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            Managers coach with real call data, not guesswork.
+          </div>
+          <div class="auth-point">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            No objection or follow-up falls through the cracks.
+          </div>
         </div>
-        <form id="signup-form">
-          <label for="organization-name">Organization name</label>
-          <input id="organization-name" type="text" autocomplete="organization" required>
-          <label for="name" style="margin-top:12px;display:block;">Your name</label>
-          <input id="name" type="text" autocomplete="name" required>
-          <label for="email" style="margin-top:12px;display:block;">Work email</label>
-          <input id="email" type="email" autocomplete="email" required>
-          <label for="password" style="margin-top:12px;display:block;">Password</label>
-          <input id="password" type="password" minlength="8" autocomplete="new-password" required>
-          <span class="field-hint">At least 8 characters.</span>
-          <button class="button primary" type="submit" style="margin-top:16px;width:100%;">Create organization</button>
-        </form>
-        <div id="notice" class="notice" role="status" aria-live="polite"></div>
-        <p class="small-print">Already have an account? <a href="/login">Log in</a>.</p>
       </section>
-    </main>
+      <section class="auth-form-side" aria-label="Create your organization">
+        <div class="auth-card">
+          <div class="eyebrow-free-head">
+            <h2 class="h-lg">Create your organization</h2>
+            <p>You'll become its first admin</p>
+          </div>
+          <form id="signup-form">
+            <div class="field">
+              <label for="organization-name">Organization name</label>
+              <input id="organization-name" type="text" autocomplete="organization" required>
+            </div>
+            <div class="field">
+              <label for="name">Your name</label>
+              <input id="name" type="text" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="email">Work email</label>
+              <input id="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <div class="field-hint-row"><label for="password">Password</label><span class="field-hint">At least 8 characters</span></div>
+              <div class="field-with-action">
+                <input id="password" type="password" minlength="8" autocomplete="new-password" required>
+                <button type="button" class="field-action" id="toggle-password" aria-label="Show password" tabindex="-1">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <button class="button primary" type="submit" id="submit-btn">Create organization</button>
+          </form>
+          <div id="notice" class="notice" role="status" aria-live="polite"></div>
+          <p class="small-print">Already have an account? <a href="/login">Log in</a>.</p>
+        </div>
+      </section>
+    </div>
   </div>
 </body>
 </html>

@@ -36,12 +36,23 @@ class InviteRequest(BaseModel):
     role: str = Field(default="rep")
 
 
+class WhatsAppPrefsRequest(BaseModel):
+    whatsapp_number: str | None = Field(default=None, max_length=32, description="E.164 format, e.g. +91...")
+    whatsapp_recap_enabled: bool = False
+
+
 def _session_payload(settings: Settings, user: User, org: Organization, role: str) -> dict:
     claims = {"user_id": user.id, "org_id": org.id, "role": role}
     return {
         "token": issue_token(settings, claims),
         "expires_in": settings.token_ttl_seconds,
-        "user": {"id": user.id, "email": user.email, "name": user.name},
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "whatsapp_number": user.whatsapp_number,
+            "whatsapp_recap_enabled": user.whatsapp_recap_enabled,
+        },
         "organization": {"id": org.id, "name": org.name},
         "role": role,
     }
@@ -94,9 +105,48 @@ def build_auth_router(settings: Settings, get_db) -> APIRouter:
         if user is None or org is None:
             raise HTTPException(404, "Account no longer exists.")
         return {
-            "user": {"id": user.id, "email": user.email, "name": user.name},
+            "user": {
+                "id": user.id, "email": user.email, "name": user.name,
+                "whatsapp_number": user.whatsapp_number, "whatsapp_recap_enabled": user.whatsapp_recap_enabled,
+            },
             "organization": {"id": org.id, "name": org.name},
             "role": claims["role"],
+        }
+
+    @router.patch("/me/whatsapp")
+    async def update_whatsapp_prefs(payload: WhatsAppPrefsRequest, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
+        user = await db.get(User, claims["user_id"])
+        if user is None:
+            raise HTTPException(404, "Account no longer exists.")
+        number = (payload.whatsapp_number or "").strip() or None
+        if payload.whatsapp_recap_enabled and not number:
+            raise HTTPException(400, "Add your WhatsApp number before enabling recaps.")
+        user.whatsapp_number = number
+        user.whatsapp_recap_enabled = payload.whatsapp_recap_enabled
+        await db.commit()
+        return {"whatsapp_number": user.whatsapp_number, "whatsapp_recap_enabled": user.whatsapp_recap_enabled}
+
+    @router.get("/team")
+    async def list_team(claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
+        rows = (
+            await db.execute(
+                select(Membership, User)
+                .join(User, Membership.user_id == User.id)
+                .where(Membership.organization_id == claims["org_id"])
+                .order_by(Membership.created_at)
+            )
+        ).all()
+        return {
+            "members": [
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": membership.role,
+                    "created_at": membership.created_at.isoformat(),
+                }
+                for membership, user in rows
+            ]
         }
 
     @router.post("/invite")

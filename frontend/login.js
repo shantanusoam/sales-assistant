@@ -1,14 +1,17 @@
-import { getSession, setSession, readError } from '/assets/api.js';
+import { getSession, setSession, readError, bindPasswordToggle, setButtonLoading, setNotice } from '/assets/api.js';
 
 const $ = (id) => document.getElementById(id);
 
 if (getSession()) window.location.href = '/';
 
+bindPasswordToggle('toggle-password', 'password');
+
 $('login-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const notice = $('notice');
-  notice.className = 'notice';
-  notice.textContent = 'Signing in…';
+  const submitBtn = $('submit-btn');
+  setNotice(notice, 'Signing in…');
+  setButtonLoading(submitBtn, true, 'Signing in…');
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
@@ -19,7 +22,7 @@ $('login-form').addEventListener('submit', async (event) => {
     setSession(await response.json());
     window.location.href = '/';
   } catch (error) {
-    notice.className = 'notice error';
-    notice.textContent = error.message || 'Login failed.';
+    setNotice(notice, error.message || 'Login failed.', 'error');
+    setButtonLoading(submitBtn, false);
   }
 });

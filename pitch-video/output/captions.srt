@@ -1,0 +1,23 @@
+1
+00:00:00,150 --> 00:00:07,580
+SalesCopilot turns every live sales call into a guided win. Scattered tools converge into one real-time brain.
+
+2
+00:00:08,100 --> 00:00:16,041
+Stream browser mic or Twilio calls through Deepgram and Sarvam AI. Playbook RAG grounds every answer in your approved docs.
+
+3
+00:00:16,500 --> 00:00:24,302
+Confirm consent, click connect, and speak in English or Hinglish. Watch objections, talk-time, and your next best line appear live.
+
+4
+00:00:24,800 --> 00:00:32,881
+In the field, run the mobile app or PWA with floating call hints. DPDP Consent gates every external share by design.
+
+5
+00:00:33,850 --> 00:00:40,073
+When the call ends, coaching scores, summaries, and follow-up drafts route straight to WhatsApp, HubSpot, and webhooks.
+
+6
+00:00:40,500 --> 00:00:45,748
+SalesCopilot. Put your best sales trainer on every call, starting day one.

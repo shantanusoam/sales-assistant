@@ -12,3 +12,8 @@ def test_chunking_and_retrieval(tmp_path: Path):
     assert results
     assert "Price" in results[0].title
     assert not LexicalRetriever(chunks).retrieve("vuvuzela shoelaces")
+
+    # Hinglish / Devanagari query expansion matches English pricing playbook
+    hi_results = LexicalRetriever(chunks).retrieve("आपका solution थोड़ा महंगा है और mehenga keemat", 2)
+    assert hi_results
+    assert "Price" in hi_results[0].title

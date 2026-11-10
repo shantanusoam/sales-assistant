@@ -33,6 +33,7 @@ def test_live_session_is_persisted_and_visible_in_call_history(tmp_sqlite_url):
             ws.receive_json()  # ready
             ws.send_json({"type": "simulate_utterance", "text": "We use Excel but our follow-ups are late."})
             ws.receive_json()  # transcript_final
+            ws.receive_json()  # signals
             ws.receive_json()  # hint
 
         # The websocket's cleanup (closing the Call row) runs after the test client's
@@ -54,8 +55,23 @@ def test_live_session_is_persisted_and_visible_in_call_history(tmp_sqlite_url):
         body = detail.json()
         assert body["turns"][0]["source"] == "manual-test"
         assert "follow" in body["turns"][0]["text"].casefold()
+        assert body["turns"][0]["sentiment"] in ("positive", "neutral", "negative")
         assert body["hints"][0]["method"] == "rules-demo"
         assert body["hints"][0]["sources"]
+
+        # post-call summary is generated in a background task after the call closes
+        summary = None
+        for _ in range(40):
+            body = client.get(f"/api/calls/{call['id']}", headers=auth).json()
+            if body["summary"] is not None:
+                summary = body["summary"]
+                break
+            time.sleep(0.05)
+        assert summary is not None, "post-call summary was never generated"
+        assert summary["method"] == "rules-demo"
+        assert 0 <= summary["coaching_score"] <= 100
+        assert summary["follow_up_email"]
+        assert summary["text"]
 
         # another organization cannot see this call
         other_signup = client.post("/api/auth/signup", json={

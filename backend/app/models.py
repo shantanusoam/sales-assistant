@@ -35,6 +35,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(200))
     name: Mapped[str] = mapped_column(String(200))
+    whatsapp_number: Mapped[str | None] = mapped_column(String(32), nullable=True)  # E.164, e.g. +9198...
+    whatsapp_recap_enabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
@@ -70,9 +72,11 @@ class Call(Base):
     from_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     turns: Mapped[list["Turn"]] = relationship(back_populates="call", order_by="Turn.seq")
     hints: Mapped[list["Hint"]] = relationship(back_populates="call", order_by="Hint.created_at")
+    summary: Mapped["CallSummary | None"] = relationship(back_populates="call")
 
 
 class Turn(Base):
@@ -85,6 +89,8 @@ class Turn(Base):
     seq: Mapped[int] = mapped_column(Integer)
     source: Mapped[str] = mapped_column(String(32))  # microphone | manual-test | twilio-customer | twilio-rep
     text: Mapped[str] = mapped_column(Text)
+    sentiment: Mapped[str] = mapped_column(String(20), default="neutral")  # positive | neutral | negative
+    intents_json: Mapped[str] = mapped_column(Text, default="[]")  # e.g. ["objection", "pricing"]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     call: Mapped[Call] = relationship(back_populates="turns")
@@ -104,3 +110,50 @@ class Hint(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     call: Mapped[Call] = relationship(back_populates="hints")
+
+
+class CallSummary(Base):
+    """One post-call analysis: summary, coaching score, and a drafted follow-up email."""
+
+    __tablename__ = "call_summaries"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    call_id: Mapped[str] = mapped_column(ForeignKey("calls.id"), unique=True, index=True)
+    summary: Mapped[str] = mapped_column(Text)
+    coaching_score: Mapped[int] = mapped_column(Integer)
+    coaching_notes: Mapped[str] = mapped_column(Text)
+    follow_up_email: Mapped[str] = mapped_column(Text)
+    disposition: Mapped[str] = mapped_column(String(20), default="no_decision")
+    method: Mapped[str] = mapped_column(String(20))  # "ai" | "rules-demo"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    call: Mapped[Call] = relationship(back_populates="summary")
+
+
+class CRMConnection(Base):
+    """One organization's connection to a third-party CRM."""
+
+    __tablename__ = "crm_connections"
+    __table_args__ = (UniqueConstraint("organization_id", name="uq_crm_connection_org"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(40))  # e.g. "hubspot"
+    encrypted_token: Mapped[str] = mapped_column(Text)
+    auto_push: Mapped[bool] = mapped_column(default=True)
+    connected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class WebhookNode(Base):
+    """A generic outgoing webhook an org admin wires up to receive post-call summaries
+    (Slack, Zapier, n8n, a spreadsheet, anything) — the generic half of the "plugin"
+    distribution system, alongside the built-in WhatsApp recap."""
+
+    __tablename__ = "webhook_nodes"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    url: Mapped[str] = mapped_column(String(2000))
+    secret: Mapped[str] = mapped_column(String(100))  # HMAC-SHA256 signs each delivered payload
+    enabled: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Sales Copilot",
+    "slug": "sales-copilot-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a1420",
+    "primaryColor": "#45c2b8",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.salescopilot.mobile",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Sales Copilot uses the microphone during consented sales meetings to transcribe conversations and surface playbook hints.",
+        "UIBackgroundModes": [
+          "audio",
+          "voip",
+          "fetch",
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.salescopilot.mobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.WAKE_LOCK"
+      ]
+    }
+  }
+}

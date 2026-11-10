@@ -16,8 +16,33 @@ logger = logging.getLogger(__name__)
 STOP = frozenset("the a an and or for from on of in at to is are was were be been my your their our i you we it that this what why how do does can could would will with about have has had not but as so if do them those".split())
 
 
+HINGLISH_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "mehenga": ("expensive", "price", "cost", "budget"),
+    "mahanga": ("expensive", "price", "cost", "budget"),
+    "keemat": ("price", "cost", "pricing"),
+    "kimat": ("price", "cost", "pricing"),
+    "paisa": ("price", "cost", "budget"),
+    "paise": ("price", "cost", "budget"),
+    "kharcha": ("cost", "budget", "expensive"),
+    "महंगा": ("expensive", "price", "cost", "budget"),
+    "बजट": ("budget", "price", "cost"),
+    "कीमत": ("price", "cost", "pricing"),
+    "पैसा": ("price", "cost", "budget"),
+    "खर्चा": ("cost", "budget"),
+    "एक्सल": ("excel", "spreadsheet", "manual"),
+    "मैनुअल": ("manual", "spreadsheet", "followup"),
+    "ट्रेनिंग": ("training", "onboarding", "implementation"),
+}
+
+
 def terms(text: str) -> list[str]:
-    return [t for t in re.findall(r"\w+", text.casefold()) if t not in STOP and len(t) >= 2]
+    low = text.casefold()
+    base = [t for t in re.findall(r"\w+", low) if t not in STOP and len(t) >= 2]
+    expanded = list(base)
+    for key, mapped in HINGLISH_SYNONYMS.items():
+        if key in low:
+            expanded.extend(mapped)
+    return expanded
 
 
 @dataclass(frozen=True)
@@ -101,6 +126,11 @@ class KnowledgeBase:
                 logger.warning("Chroma is unavailable; using lexical demo retrieval.")
             except Exception:
                 logger.exception("Cannot load vector index; using lexical demo retrieval.")
+
+    def reload(self) -> None:
+        """Reload markdown playbooks from disk into the lexical retriever."""
+        self.chunks = load_chunks(self.settings.playbook_dir)
+        self.fallback = LexicalRetriever(self.chunks)
 
     async def retrieve(self, utterance: str, k: int = 3) -> list[Snippet]:
         if self.collection is not None and self.embedder is not None:

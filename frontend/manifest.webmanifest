@@ -1,0 +1,19 @@
+{
+  "name": "Sales Copilot — Real-Time AI Call Assistant",
+  "short_name": "SalesCopilot",
+  "description": "Real-time sales call transcription, playbook-grounded hints, post-call coaching, and WhatsApp/CRM distribution.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a1420",
+  "theme_color": "#0a1420",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

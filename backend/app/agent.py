@@ -47,13 +47,22 @@ class HintAgent:
 
         # Explicit non-AI demo behavior (no API keys). Deterministic and safe.
         q = utterance.casefold()
-        if any(x in q for x in ("price", "cost", "expensive", "budget", "discount")):
+        if any(x in q for x in (
+            "price", "cost", "expensive", "budget", "discount",
+            "mehenga", "mahanga", "keemat", "kimat", "paisa", "kharcha", "महंगा", "बजट", "कीमत", "पैसा",
+        )):
             message = "Ask what the current process costs in missed follow-ups and rework before discussing scope."
-        elif any(x in q for x in ("spreadsheet", "excel", "whatsapp", "manual")):
+        elif any(x in q for x in (
+            "spreadsheet", "excel", "whatsapp", "manual", "register", "sheet", "एक्सल", "मैनुअल",
+        )):
             message = "Ask where tracking breaks today: inquiry assignment, follow-ups, offers, or order updates."
-        elif any(x in q for x in ("implementation", "training", "adoption", "onboarding")):
+        elif any(x in q for x in (
+            "implementation", "training", "adoption", "onboarding", "seekhna", "sikhana", "ट्रेनिंग", "सिखाना",
+        )):
             message = "Ask who will use the system first and which workflow they need operational on day one."
-        elif any(x in q for x in ("integration", "api", "existing system")):
+        elif any(x in q for x in (
+            "integration", "api", "existing system", "crm", "erp", "tally", "zoho",
+        )):
             message = "Clarify the source system, required fields, and whether data must sync one-way or both ways."
         else:
             message = "Ask which specific bottleneck they most want to remove before recommending a solution."

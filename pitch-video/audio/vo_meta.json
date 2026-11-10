@@ -1,0 +1,472 @@
+[
+  {
+    "id": "L1",
+    "text": "SalesCopilot turns every live sales call into a guided win. Scattered tools converge into one real-time brain.",
+    "dur": 7.43,
+    "words": [
+      {
+        "w": "SalesCopilot",
+        "t": 0.0
+      },
+      {
+        "w": "turns",
+        "t": 0.917
+      },
+      {
+        "w": "every",
+        "t": 1.277
+      },
+      {
+        "w": "live",
+        "t": 1.614
+      },
+      {
+        "w": "sales",
+        "t": 1.904
+      },
+      {
+        "w": "call",
+        "t": 2.218
+      },
+      {
+        "w": "into",
+        "t": 2.461
+      },
+      {
+        "w": "a",
+        "t": 2.694
+      },
+      {
+        "w": "guided",
+        "t": 2.81
+      },
+      {
+        "w": "win.",
+        "t": 3.216
+      },
+      {
+        "w": "Scattered",
+        "t": 4.098
+      },
+      {
+        "w": "tools",
+        "t": 4.574
+      },
+      {
+        "w": "converge",
+        "t": 4.969
+      },
+      {
+        "w": "into",
+        "t": 5.492
+      },
+      {
+        "w": "one",
+        "t": 5.828
+      },
+      {
+        "w": "real-time",
+        "t": 6.13
+      },
+      {
+        "w": "brain.",
+        "t": 6.676
+      }
+    ]
+  },
+  {
+    "id": "L2",
+    "text": "Stream browser mic or Twilio calls through Deepgram and Sarvam AI. Playbook RAG grounds every answer in your approved docs.",
+    "dur": 7.941,
+    "words": [
+      {
+        "w": "Stream",
+        "t": 0.0
+      },
+      {
+        "w": "browser",
+        "t": 0.372
+      },
+      {
+        "w": "mic",
+        "t": 0.755
+      },
+      {
+        "w": "or",
+        "t": 0.987
+      },
+      {
+        "w": "Twilio",
+        "t": 1.115
+      },
+      {
+        "w": "calls",
+        "t": 1.695
+      },
+      {
+        "w": "through",
+        "t": 1.962
+      },
+      {
+        "w": "Deepgram",
+        "t": 2.287
+      },
+      {
+        "w": "and",
+        "t": 2.856
+      },
+      {
+        "w": "Sarvam",
+        "t": 3.007
+      },
+      {
+        "w": "AI.",
+        "t": 3.506
+      },
+      {
+        "w": "Playbook",
+        "t": 4.632
+      },
+      {
+        "w": "RAG",
+        "t": 5.108
+      },
+      {
+        "w": "grounds",
+        "t": 5.387
+      },
+      {
+        "w": "every",
+        "t": 5.863
+      },
+      {
+        "w": "answer",
+        "t": 6.188
+      },
+      {
+        "w": "in",
+        "t": 6.502
+      },
+      {
+        "w": "your",
+        "t": 6.606
+      },
+      {
+        "w": "approved",
+        "t": 6.769
+      },
+      {
+        "w": "docs.",
+        "t": 7.175
+      }
+    ]
+  },
+  {
+    "id": "L3",
+    "text": "Confirm consent, click connect, and speak in English or Hinglish. Watch objections, talk-time, and your next best line appear live.",
+    "dur": 7.802,
+    "words": [
+      {
+        "w": "Confirm",
+        "t": 0.0
+      },
+      {
+        "w": "consent,",
+        "t": 0.522
+      },
+      {
+        "w": "click",
+        "t": 1.126
+      },
+      {
+        "w": "connect,",
+        "t": 1.393
+      },
+      {
+        "w": "and",
+        "t": 1.823
+      },
+      {
+        "w": "speak",
+        "t": 1.974
+      },
+      {
+        "w": "in",
+        "t": 2.264
+      },
+      {
+        "w": "English",
+        "t": 2.368
+      },
+      {
+        "w": "or",
+        "t": 2.728
+      },
+      {
+        "w": "Hinglish.",
+        "t": 2.891
+      },
+      {
+        "w": "Watch",
+        "t": 3.994
+      },
+      {
+        "w": "objections,",
+        "t": 4.296
+      },
+      {
+        "w": "talk-time,",
+        "t": 5.004
+      },
+      {
+        "w": "and",
+        "t": 5.666
+      },
+      {
+        "w": "your",
+        "t": 5.793
+      },
+      {
+        "w": "next",
+        "t": 5.956
+      },
+      {
+        "w": "best",
+        "t": 6.211
+      },
+      {
+        "w": "line",
+        "t": 6.502
+      },
+      {
+        "w": "appear",
+        "t": 6.803
+      },
+      {
+        "w": "live.",
+        "t": 7.129
+      }
+    ]
+  },
+  {
+    "id": "L4",
+    "text": "In the field, run the mobile app or PWA with floating call hints. DPDP Consent gates every external share by design.",
+    "dur": 8.081,
+    "words": [
+      {
+        "w": "In",
+        "t": 0.0
+      },
+      {
+        "w": "the",
+        "t": 0.186
+      },
+      {
+        "w": "field,",
+        "t": 0.313
+      },
+      {
+        "w": "run",
+        "t": 0.697
+      },
+      {
+        "w": "the",
+        "t": 0.894
+      },
+      {
+        "w": "mobile",
+        "t": 1.01
+      },
+      {
+        "w": "app",
+        "t": 1.382
+      },
+      {
+        "w": "or",
+        "t": 1.637
+      },
+      {
+        "w": "PWA",
+        "t": 1.823
+      },
+      {
+        "w": "with",
+        "t": 2.543
+      },
+      {
+        "w": "floating",
+        "t": 2.763
+      },
+      {
+        "w": "call",
+        "t": 3.216
+      },
+      {
+        "w": "hints.",
+        "t": 3.518
+      },
+      {
+        "w": "DPDP",
+        "t": 4.342
+      },
+      {
+        "w": "Consent",
+        "t": 5.143
+      },
+      {
+        "w": "gates",
+        "t": 5.573
+      },
+      {
+        "w": "every",
+        "t": 6.014
+      },
+      {
+        "w": "external",
+        "t": 6.339
+      },
+      {
+        "w": "share",
+        "t": 6.815
+      },
+      {
+        "w": "by",
+        "t": 7.07
+      },
+      {
+        "w": "design.",
+        "t": 7.245
+      }
+    ]
+  },
+  {
+    "id": "L5",
+    "text": "When the call ends, coaching scores, summaries, and follow-up drafts route straight to WhatsApp, HubSpot, and webhooks.",
+    "dur": 6.223,
+    "words": [
+      {
+        "w": "When",
+        "t": 0.0
+      },
+      {
+        "w": "the",
+        "t": 0.232
+      },
+      {
+        "w": "call",
+        "t": 0.337
+      },
+      {
+        "w": "ends,",
+        "t": 0.662
+      },
+      {
+        "w": "coaching",
+        "t": 1.022
+      },
+      {
+        "w": "scores,",
+        "t": 1.44
+      },
+      {
+        "w": "summaries,",
+        "t": 1.858
+      },
+      {
+        "w": "and",
+        "t": 2.38
+      },
+      {
+        "w": "follow-up",
+        "t": 2.601
+      },
+      {
+        "w": "drafts",
+        "t": 3.065
+      },
+      {
+        "w": "route",
+        "t": 3.437
+      },
+      {
+        "w": "straight",
+        "t": 3.669
+      },
+      {
+        "w": "to",
+        "t": 3.971
+      },
+      {
+        "w": "WhatsApp,",
+        "t": 4.098
+      },
+      {
+        "w": "HubSpot,",
+        "t": 4.679
+      },
+      {
+        "w": "and",
+        "t": 5.201
+      },
+      {
+        "w": "webhooks.",
+        "t": 5.341
+      }
+    ]
+  },
+  {
+    "id": "L6",
+    "text": "SalesCopilot. Put your best sales trainer on every call, starting day one.",
+    "dur": 5.248,
+    "words": [
+      {
+        "w": "SalesCopilot.",
+        "t": 0.0
+      },
+      {
+        "w": "Put",
+        "t": 1.916
+      },
+      {
+        "w": "your",
+        "t": 2.148
+      },
+      {
+        "w": "best",
+        "t": 2.357
+      },
+      {
+        "w": "sales",
+        "t": 2.612
+      },
+      {
+        "w": "trainer",
+        "t": 2.914
+      },
+      {
+        "w": "on",
+        "t": 3.251
+      },
+      {
+        "w": "every",
+        "t": 3.367
+      },
+      {
+        "w": "call,",
+        "t": 3.611
+      },
+      {
+        "w": "starting",
+        "t": 3.947
+      },
+      {
+        "w": "day",
+        "t": 4.377
+      },
+      {
+        "w": "one.",
+        "t": 4.632
+      }
+    ]
+  }
+]

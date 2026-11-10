@@ -1,0 +1,606 @@
+:root {
+  --bg-dark: #090b0e;
+  --panel-dark: #10141b;
+  --panel-dark-2: #151b24;
+  --line-dark: #262e3b;
+  --ink-light: #f5f7fa;
+  --ink-dim: #9ba8b8;
+  --ink-muted: #687688;
+
+  --bg-light: #f4f6f8;
+  --panel-light: #ffffff;
+  --line-light: #d5dce4;
+  --ink-dark: #0b0d12;
+  --ink-dark-dim: #455060;
+
+  --teal: #45c2b8;
+  --teal-dark: #0b7a72;
+  --blue: #4fa8dc;
+  --orange: #ff9a3d;
+  --danger: #ff8a7a;
+  --success: #6fe0b8;
+
+  font-family: Inter, Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--ink-light);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+
+.stage.theme-light {
+  background: var(--bg-light);
+  color: var(--ink-dark);
+}
+
+/* Subtle architectural vector grid */
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  display: none;
+}
+
+.scene.active {
+  display: block;
+}
+
+/* Exact measured text boxes for qa_video.py */
+.measured-hook {
+  position: absolute;
+  left: 140px;
+  top: 74px;
+  width: 1640px;
+  height: 118px;
+  font-size: 92px;
+  line-height: 110px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #f5f7fa;
+  white-space: nowrap;
+}
+
+.measured-cta {
+  position: absolute;
+  left: 140px;
+  top: 206px;
+  width: 900px;
+  height: 68px;
+  font-size: 52px;
+  line-height: 62px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--teal);
+  white-space: nowrap;
+}
+
+.measured-term-rag {
+  position: absolute;
+  left: 1320px;
+  top: 64px;
+  width: 460px;
+  height: 74px;
+  font-size: 56px;
+  line-height: 68px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--teal);
+  white-space: nowrap;
+}
+
+.measured-term-dpdp {
+  position: absolute;
+  left: 1320px;
+  top: 64px;
+  width: 460px;
+  height: 74px;
+  font-size: 56px;
+  line-height: 68px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0b0d12;
+  white-space: nowrap;
+}
+
+/* Scene 1: Node Convergence */
+.converge-canvas {
+  position: absolute;
+  left: 140px;
+  top: 290px;
+  width: 1640px;
+  height: 680px;
+}
+
+.node-card {
+  position: absolute;
+  width: 220px;
+  height: 68px;
+  background: var(--panel-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-light);
+}
+
+.node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  flex-shrink: 0;
+}
+
+.brain-hub {
+  position: absolute;
+  left: 690px;
+  top: 250px;
+  width: 260px;
+  height: 180px;
+  background: var(--panel-dark-2);
+  border: 2px solid var(--teal);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.logo-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 40px;
+}
+
+.logo-bars span {
+  width: 9px;
+  border-radius: 4px;
+  background: var(--teal);
+}
+
+.brain-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink-light);
+}
+
+.brain-sub {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Scene 2: Infinite-Canvas Architecture */
+.arch-header {
+  position: absolute;
+  left: 140px;
+  top: 56px;
+}
+
+.arch-title {
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink-light);
+}
+
+.arch-sub {
+  font-size: 24px;
+  color: var(--ink-dim);
+  margin-top: 6px;
+}
+
+.arch-stage {
+  position: absolute;
+  left: 140px;
+  top: 280px;
+  width: 1640px;
+  height: 660px;
+}
+
+.arch-box {
+  position: absolute;
+  background: var(--panel-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  padding: 26px 28px;
+}
+
+.arch-box.highlight-teal {
+  border-color: var(--teal);
+  background: #102428;
+}
+
+.arch-box-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.arch-box h3 {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.arch-box p {
+  font-size: 20px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+
+/* Scene 3: Bento UI Dashboard & Cursor */
+.bento-window {
+  position: absolute;
+  left: 140px;
+  top: 185px;
+  width: 1640px;
+  height: 730px;
+  background: var(--panel-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.bento-topbar {
+  height: 68px;
+  border-bottom: 1px solid var(--line-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  background: var(--panel-dark-2);
+}
+
+.bento-brand {
+  font-size: 24px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.honesty-badge {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  border: 1px solid var(--line-dark);
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px 32px;
+  height: 662px;
+}
+
+.bento-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bento-card {
+  background: var(--bg-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.consent-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink-light);
+}
+
+.check-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 2px solid var(--ink-dim);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #052821;
+}
+
+.check-box.checked {
+  background: var(--teal);
+  border-color: var(--teal);
+}
+
+.utterance-box {
+  font-size: 28px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--ink-light);
+  margin-top: 12px;
+}
+
+.pill-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.bento-pill {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line-dark);
+  text-transform: uppercase;
+}
+
+.bento-hint-card {
+  background: #0f292c;
+  border: 2px solid var(--teal);
+  border-radius: 16px;
+  padding: 28px;
+  flex: 1;
+}
+
+.bento-hint-text {
+  font-size: 36px;
+  line-height: 1.35;
+  font-weight: 800;
+  color: var(--ink-light);
+  margin: 18px 0;
+}
+
+.cursor-ptr {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Scene 4: High-Contrast White Flip — Mobile Hardware & DPDP Consent */
+.mobile-frame {
+  position: absolute;
+  left: 180px;
+  top: 185px;
+  width: 460px;
+  height: 730px;
+  background: var(--ink-dark);
+  border: 2px solid #222934;
+  border-radius: 42px;
+  padding: 24px;
+  color: var(--ink-light);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-notch {
+  width: 120px;
+  height: 18px;
+  background: #1b222c;
+  border-radius: 10px;
+  align-self: center;
+}
+
+.mobile-hud {
+  background: #11383c;
+  border: 2px solid var(--teal);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.mobile-hud-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 0.06em;
+}
+
+.mobile-hud-body {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #ffffff;
+  margin-top: 8px;
+}
+
+.white-right-col {
+  position: absolute;
+  left: 720px;
+  top: 215px;
+  width: 1040px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.white-bento-card {
+  background: var(--panel-light);
+  border: 2px solid var(--line-light);
+  border-radius: 18px;
+  padding: 26px 32px;
+  color: var(--ink-dark);
+}
+
+.white-bento-card h3 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  margin-bottom: 8px;
+}
+
+.white-bento-card p {
+  font-size: 22px;
+  color: var(--ink-dark-dim);
+  line-height: 1.45;
+}
+
+/* Scene 5: Payoff — Post-Call Intelligence & Auto-Distribution */
+.payoff-card {
+  position: absolute;
+  left: 140px;
+  top: 210px;
+  width: 820px;
+  height: 680px;
+  background: var(--panel-dark);
+  border: 2px solid var(--teal);
+  border-radius: 22px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+.score-big {
+  font-size: 112px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--teal);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-unit {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--ink-dim);
+}
+
+.dist-column {
+  position: absolute;
+  left: 1180px;
+  top: 210px;
+  width: 600px;
+  height: 680px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dist-node {
+  height: 190px;
+  background: var(--panel-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  padding: 26px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dist-node h3 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ink-light);
+}
+
+.dist-node p {
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+/* Scene 6: Closing Poster */
+.close-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 160px;
+}
+
+.close-headline {
+  font-size: 76px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--ink-light);
+  margin-top: 32px;
+}
+
+.close-cta-box {
+  margin-top: 40px;
+  padding: 20px 38px;
+  border: 2px solid var(--teal);
+  border-radius: 16px;
+  background: #0f2629;
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--teal);
+}
+
+/* Subtitle strip */
+.caption-bar {
+  position: absolute;
+  left: 160px;
+  right: 160px;
+  bottom: 34px;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--ink-light);
+  background: rgba(9, 11, 14, 0.86);
+  border: 1px solid var(--line-dark);
+  padding: 10px 24px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.stage.theme-light .caption-bar {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink-dark);
+  border-color: var(--line-light);
+}

@@ -5,3 +5,12 @@ __pycache__/
 *.pyc
 .venv/
 data/
+node_modules/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.github/hooks/
+.impeccable/
+.serena/
+.playwright-mcp/

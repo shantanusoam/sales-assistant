@@ -46,9 +46,13 @@ def test_end_to_end_simulated_utterance(tmp_sqlite_url):
             assert ready["microphone_enabled"] is False
             ws.send_json({"type": "simulate_utterance", "text": "We use Excel but our follow-ups are late."})
             transcript = ws.receive_json()
+            signals = ws.receive_json()
             hint = ws.receive_json()
             assert transcript["type"] == "transcript_final"
             assert transcript["source"] == "manual-test"
+            assert transcript["sentiment"] in ("positive", "neutral", "negative")
+            assert signals["type"] == "signals"
+            assert signals["talk_time"]["rep_words"] > 0
             assert hint["type"] == "hint"
             assert hint["method"] == "rules-demo"
             assert "follow" in hint["text"].casefold() or "inquiry" in hint["text"].casefold()
