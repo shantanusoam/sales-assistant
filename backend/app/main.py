@@ -8,9 +8,9 @@ import hmac
 import json
 import logging
 import time
-from collections import defaultdict, deque
+from collections import deque, defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import struct
 from typing import Awaitable, Callable
@@ -43,12 +43,17 @@ from .deepgram import DeepgramStream
 from .speech_sarvam import SarvamStream
 from .deps import build_current_claims_dependency
 from .knowledge import KnowledgeBase
-from .models import Call, CallSummary, CRMConnection, Hint, Organization, Turn, User, WebhookNode
+from .lifecycle import prune_old_calls
+from .models import Call, CallSummary, CRMConnection, Hint, Organization, Turn, User, WebhookDelivery, WebhookNode
 from .post_call import TurnLike, generate_call_summary
 from .signals import CUSTOMER_SOURCES, REP_SOURCES, CallSignals, tag_turn
+from .worker import BackgroundWorker
 
 logger = logging.getLogger(__name__)
 FRONTEND = ROOT / "frontend"
+
+# Webhook delivery retry backoff (seconds) after attempt 1, 2, 3 — max 3 attempts.
+WEBHOOK_RETRY_DELAYS = (60, 300, 1800)
 
 
 class OutboundCallRequest(BaseModel):
@@ -137,11 +142,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings()
     engine, get_db, db_sessions = make_db(config)
 
+    if config.sentry_dsn:
+        try:
+            import sentry_sdk
+            from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+            sentry_sdk.init(dsn=config.sentry_dsn, integrations=[FastApiIntegration()], traces_sample_rate=0.1)
+            logger.info("Sentry error monitoring initialized.")
+        except ImportError:
+            logger.warning("SENTRY_DSN is set but sentry-sdk is not installed; run pip install sentry-sdk[fastapi].")
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         if config.database_url.startswith("sqlite"):
             await create_all(engine)
+        background_worker.start()
         yield
+        await background_worker.stop()
         await engine.dispose()
 
     application = FastAPI(title="Sales Copilot MVP", docs_url=None, redoc_url=None, lifespan=lifespan)
@@ -167,13 +184,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await calls_allowed(db, org_id)
 
     async def summarize_call(call_id: str) -> None:
-        """Runs after a call ends: generates and persists its post-call summary.
+        """Runs after a call ends: generates and persists its post-call summary, then
+        fans out consented distribution (CRM, WhatsApp, webhooks).
 
-        Awaited (not fire-and-forget) from within the same asyncio.shield() that
-        protects the call's own ended_at write — a detached asyncio.create_task()
-        here is not reliably driven to completion by every ASGI server/test harness
-        once the websocket's own task is finishing up, so this keeps it on the same
-        awaited, cancellation-shielded chain that already works for that write.
+        Executed by the lifespan-owned BackgroundWorker (enqueued from the call-close
+        path) rather than inline in the WebSocket teardown, so a socket disconnect or
+        ASGI task cancellation can never drop post-call work.
         """
         try:
             async with db_sessions() as db:
@@ -272,16 +288,120 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         body = json.dumps(payload, sort_keys=True).encode()
         for node in nodes:
             signature = hmac.new(node.secret.encode(), body, hashlib.sha256).hexdigest()
+            delivered, status_code, error = False, None, None
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     resp = await client.post(
                         node.url, content=body,
                         headers={"Content-Type": "application/json", "X-Signature-SHA256": signature},
                     )
-                if resp.status_code >= 400:
+                status_code = resp.status_code
+                delivered = resp.status_code < 400
+                if not delivered:
                     logger.warning("Webhook node %s returned %s", node.id, resp.status_code)
             except Exception:
                 logger.exception("Webhook delivery failed for node %s", node.id)
+                error = "delivery failed (network error or timeout)"
+            await record_webhook_attempt(
+                node, call_id=call_id, event="call.summary_ready", body=body,
+                delivered=delivered, status_code=status_code, error=error,
+            )
+
+    async def record_webhook_attempt(
+        node: WebhookNode, call_id: str | None, event: str, body: bytes,
+        delivered: bool, status_code: int | None, error: str | None,
+    ) -> None:
+        """Upsert one delivery stream per (node, event, call): attempts increment on
+        this push; failures schedule a backoff retry that the worker's tick picks up.
+        The exact payload bytes are stored so a retry replays an identical, verifiable
+        payload (same body → same HMAC signature)."""
+        async with db_sessions() as db:
+            row = await db.scalar(select(WebhookDelivery).where(
+                WebhookDelivery.webhook_node_id == node.id,
+                WebhookDelivery.event == event,
+                WebhookDelivery.call_id == call_id,
+            ))
+            if row is None:
+                row = WebhookDelivery(
+                    webhook_node_id=node.id,
+                    organization_id=node.organization_id,
+                    call_id=call_id,
+                    event=event,
+                    payload_json=body.decode("utf-8"),
+                    attempts=0,
+                )
+                db.add(row)
+            row.attempts += 1
+            now = datetime.now(timezone.utc).replace(tzinfo=None)  # SQLite-safe comparisons
+            if delivered:
+                row.delivered_at = now
+                row.status_code = status_code
+                row.error = None
+                row.next_retry_at = None
+            else:
+                row.status_code = status_code
+                row.error = error or (f"HTTP {status_code}" if status_code else "unknown failure")
+                delay = WEBHOOK_RETRY_DELAYS[min(row.attempts, len(WEBHOOK_RETRY_DELAYS)) - 1]
+                row.next_retry_at = now + timedelta(seconds=delay)
+            await db.commit()
+
+    async def retry_due_webhook_deliveries() -> None:
+        """Worker tick: re-attempt failed webhook deliveries whose backoff elapsed."""
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        async with db_sessions() as db:
+            due = list(await db.scalars(
+                select(WebhookDelivery).where(
+                    WebhookDelivery.delivered_at.is_(None),
+                    WebhookDelivery.next_retry_at.is_not(None),
+                    WebhookDelivery.next_retry_at <= now,
+                    WebhookDelivery.attempts < len(WEBHOOK_RETRY_DELAYS),
+                ).limit(20)
+            ))
+            for row in due:
+                node = await db.get(WebhookNode, row.webhook_node_id)
+                if node is None or not node.enabled:
+                    # Node removed/disabled: stop retrying, keep the history row.
+                    row.next_retry_at = None
+                    row.error = (row.error or "") + " (node disabled or removed)"
+                    await db.commit()
+                    continue
+                body = row.payload_json.encode("utf-8")
+                signature = hmac.new(node.secret.encode(), body, hashlib.sha256).hexdigest()
+                delivered, status_code, error = False, None, None
+                try:
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        resp = await client.post(
+                            node.url, content=body,
+                            headers={"Content-Type": "application/json", "X-Signature-SHA256": signature},
+                        )
+                    status_code = resp.status_code
+                    delivered = resp.status_code < 400
+                except Exception:
+                    logger.exception("Webhook retry failed for node %s", node.id)
+                    error = "delivery failed (network error or timeout)"
+                row.attempts += 1
+                if delivered:
+                    row.delivered_at = now
+                    row.status_code = status_code
+                    row.error = None
+                    row.next_retry_at = None
+                else:
+                    row.status_code = status_code
+                    row.error = error or (f"HTTP {status_code}" if status_code else "unknown failure")
+                    delay = WEBHOOK_RETRY_DELAYS[min(row.attempts, len(WEBHOOK_RETRY_DELAYS)) - 1]
+                    row.next_retry_at = now + timedelta(seconds=delay)
+                await db.commit()
+
+    async def worker_tick() -> None:
+        await retry_due_webhook_deliveries()
+        if config.retention_days > 0:
+            async with db_sessions() as db:
+                pruned = await prune_old_calls(db, config.retention_days)
+                if pruned:
+                    logger.info("Retention pruning removed %d call(s) older than %d days", pruned, config.retention_days)
+
+    background_worker = BackgroundWorker(call_handler=summarize_call, tick_handler=worker_tick)
+
 
     async def broadcast_to_dashboards(payload: dict, org_id: str | None = None) -> None:
         if org_id:
@@ -676,7 +796,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         call.ended_at = datetime.now(timezone.utc)
                         await db.commit()
                 if turn_seq > 0:
-                    await summarize_call(db_call_id)
+                    background_worker.enqueue_call(db_call_id)
 
             await asyncio.shield(_write())
 
@@ -940,7 +1060,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         call.ended_at = datetime.now(timezone.utc)
                         await db.commit()
                 if turn_seq > 0:
-                    await summarize_call(call_id)
+                    background_worker.enqueue_call(call_id)
 
             await asyncio.shield(_write())
 

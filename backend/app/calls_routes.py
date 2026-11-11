@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -142,6 +143,50 @@ def build_calls_router(get_db, require_auth, settings: Settings | None = None) -
         rep_names = await _rep_names_for_calls(db, calls)
         return {"calls": [_call_summary(c, rep_names) for c in calls]}
 
+    @router.get("/export")
+    async def export_calls(claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
+        """Full data export for the caller's organization (data-portability requests)."""
+        calls = list(
+            await db.scalars(
+                select(Call)
+                .where(Call.organization_id == claims["org_id"])
+                .options(selectinload(Call.turns), selectinload(Call.hints), selectinload(Call.summary))
+                .order_by(Call.started_at.desc())
+            )
+        )
+        rep_names = {}
+        rep_ids = {c.rep_user_id for c in calls if c.rep_user_id}
+        if rep_ids:
+            rep_names = {u.id: u.name for u in await db.scalars(select(User).where(User.id.in_(rep_ids)))}
+        return {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "organization_id": claims["org_id"],
+            "calls": [
+                {
+                    **_call_summary(c, rep_names),
+                    "summary": {
+                        "text": c.summary.summary,
+                        "coaching_score": c.summary.coaching_score,
+                        "coaching_notes": c.summary.coaching_notes,
+                        "follow_up_email": c.summary.follow_up_email,
+                        "disposition": c.summary.disposition,
+                        "method": c.summary.method,
+                    } if c.summary else None,
+                    "turns": [
+                        {"source": t.source, "text": t.text, "seq": t.seq, "sentiment": t.sentiment,
+                         "intents": json.loads(t.intents_json or "[]"), "created_at": t.created_at.isoformat()}
+                        for t in c.turns
+                    ],
+                    "hints": [
+                        {"text": h.text, "method": h.method, "sources": json.loads(h.sources_json),
+                         "processing_ms": h.processing_ms, "feedback": h.feedback, "created_at": h.created_at.isoformat()}
+                        for h in c.hints
+                    ],
+                }
+                for c in calls
+            ],
+        }
+
     @router.get("/{call_id}")
     async def get_call(call_id: str, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
         call = await db.get(Call, call_id, options=[selectinload(Call.turns), selectinload(Call.hints), selectinload(Call.summary)])
@@ -179,6 +224,20 @@ def build_calls_router(get_db, require_auth, settings: Settings | None = None) -
                 for h in call.hints
             ],
         }
+
+    @router.delete("/{call_id}")
+    async def delete_call(call_id: str, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
+        """DPDP/GDPR-style erasure: permanently remove one call and all child rows.
+        Managers and admins only."""
+        if claims["role"] not in ("admin", "manager"):
+            raise HTTPException(403, "Only an admin or manager can delete calls.")
+        call = await db.get(Call, call_id)
+        if call is None or call.organization_id != claims["org_id"]:
+            raise HTTPException(404, "Call not found.")
+        from .lifecycle import delete_call_rows
+
+        await delete_call_rows(db, call_id)
+        return {"deleted": True}
 
     @router.post("/hints/{hint_id}/feedback")
     async def hint_feedback(

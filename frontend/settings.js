@@ -284,6 +284,35 @@ function renderWebhooks(webhooks) {
   });
 }
 
+async function loadWebhookDeliveries() {
+  const container = $('webhook-deliveries');
+  if (!container || !isAdmin) return;
+  try {
+    const res = await apiFetch('/api/webhooks/deliveries');
+    if (!res.ok) return; // non-admins never see the container
+    const { deliveries } = await res.json();
+    if (!deliveries.length) {
+      container.innerHTML = '<p class="field-hint">No webhook deliveries yet — rows appear here after the first consented call.</p>';
+      return;
+    }
+    container.innerHTML = `
+      <div class="field-hint-row" style="margin-bottom:8px;"><span class="label-xs">Recent deliveries</span></div>
+      <div class="history-list">
+        ${deliveries.slice(0, 10).map(d => `
+          <div class="history-row" style="cursor:default;padding:10px 14px;">
+            <span class="chip ${d.delivered ? 'chip-positive' : 'chip-negative'}">${d.delivered ? 'Delivered' : 'Failed'}</span>
+            <div class="history-meta">
+              <strong style="word-break:break-all;font-size:0.75rem;">${escapeHtml(d.url || 'removed webhook')} · ${escapeHtml(d.event)}</strong>
+              <span>${escapeHtml(fmtDate(d.created_at))} · attempt ${d.attempts}${d.next_retry_at && !d.delivered ? ` · retry scheduled` : ''}${d.error ? ` · ${escapeHtml(d.error)}` : ''}</span>
+            </div>
+            ${d.status_code ? `<span class="head-tag">${d.status_code}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch { /* deliveries are supplementary; never break the panel */ }
+}
+
 async function loadWebhooks() {
   $('webhook-content').innerHTML = '<p class="field-hint">Loading…</p>';
   try {
@@ -291,6 +320,7 @@ async function loadWebhooks() {
     if (!res.ok) throw new Error('Could not load webhooks.');
     const { webhooks } = await res.json();
     renderWebhooks(webhooks);
+    await loadWebhookDeliveries();
   } catch (error) {
     $('webhook-content').innerHTML = `<p class="field-hint">${escapeHtml(error.message)}</p>`;
   }

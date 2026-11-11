@@ -41,6 +41,11 @@ class Settings:
     twilio_default_to: str = field(default_factory=lambda: _env("TWILIO_DEFAULT_TO"))
     twilio_whatsapp_from: str = field(default_factory=lambda: _env("TWILIO_WHATSAPP_FROM"))  # E.164, no "whatsapp:" prefix
     twilio_whatsapp_template_sid: str = field(default_factory=lambda: _env("TWILIO_WHATSAPP_TEMPLATE_SID"))
+    # Data lifecycle: when set (> 0), calls older than this many days are pruned
+    # (with their turns/hints/summaries) by the background worker. 0 = keep forever.
+    retention_days: int = field(default_factory=lambda: int(_env("RETENTION_DAYS", "0") or 0))
+    # Optional error monitoring; the SDK is imported only when a DSN is present.
+    sentry_dsn: str = field(default_factory=lambda: _env("SENTRY_DSN"))
     # Reject TwiML/webhook requests whose X-Twilio-Signature does not validate. Only
     # disable for local replay testing; production must keep this on.
     twilio_validate_signatures: bool = field(default_factory=lambda: _env(

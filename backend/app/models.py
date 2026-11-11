@@ -194,3 +194,27 @@ class WebhookNode(Base):
     secret: Mapped[str] = mapped_column(String(100))  # HMAC-SHA256 signs each delivered payload
     enabled: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class WebhookDelivery(Base):
+    """One delivery stream per (node, event, call). Every attempt — the initial push
+    and each scheduled retry — updates the row, so the admin can answer "did it
+    deliver?" from the delivery log instead of guessing."""
+
+    __tablename__ = "webhook_deliveries"
+    __table_args__ = (
+        UniqueConstraint("webhook_node_id", "event", "call_id", name="uq_delivery_node_event_call"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    webhook_node_id: Mapped[str] = mapped_column(ForeignKey("webhook_nodes.id"), index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    call_id: Mapped[str | None] = mapped_column(String(32), index=True, nullable=True)
+    event: Mapped[str] = mapped_column(String(40))
+    payload_json: Mapped[str] = mapped_column(Text)  # stored so retries replay the exact payload
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status_code: Mapped[int | None] = mapped_column(nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

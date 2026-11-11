@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import WebhookNode
+from .models import WebhookDelivery, WebhookNode
 
 
 class CreateWebhookRequest(BaseModel):
@@ -76,6 +76,40 @@ def build_webhook_router(get_db, require_auth) -> APIRouter:
         await db.delete(node)
         await db.commit()
         return {"deleted": True}
+
+    @router.get("/deliveries")
+    async def list_deliveries(claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
+        """Delivery log: what was pushed where, when, and whether it made it (admin-only,
+        since payloads contain call summaries)."""
+        require_admin(claims)
+        rows = list(await db.scalars(
+            select(WebhookDelivery)
+            .where(WebhookDelivery.organization_id == claims["org_id"])
+            .order_by(WebhookDelivery.created_at.desc())
+            .limit(50)
+        ))
+        node_urls = {
+            n.id: n.url
+            for n in await db.scalars(select(WebhookNode).where(WebhookNode.organization_id == claims["org_id"]))
+        }
+        return {
+            "deliveries": [
+                {
+                    "id": r.id,
+                    "webhook_node_id": r.webhook_node_id,
+                    "url": node_urls.get(r.webhook_node_id),
+                    "call_id": r.call_id,
+                    "event": r.event,
+                    "attempts": r.attempts,
+                    "delivered": r.delivered_at is not None,
+                    "status_code": r.status_code,
+                    "error": r.error,
+                    "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+                    "created_at": r.created_at.isoformat(),
+                }
+                for r in rows
+            ]
+        }
 
     @router.post("/{webhook_id}/test")
     async def test_webhook(webhook_id: str, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:
