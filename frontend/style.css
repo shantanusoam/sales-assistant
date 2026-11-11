@@ -490,6 +490,13 @@ svg { display: block; }
 /* ===== Settings layout & subforms ===== */
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .settings-column { display: flex; flex-direction: column; min-width: 0; }
+.hint-feedback-row {
+  display: flex; align-items: center; gap: 8px; padding: 0 22px 18px;
+  font-size: 0.75rem; color: var(--muted);
+}
+.hint-feedback-row .copy-btn.feedback-sent { color: var(--teal); border-color: #2a5a4a; }
+.hint-feedback-row[hidden] { display: none; }
+
 .settings-subform { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .settings-subform textarea {
   width: 100%; padding: 11px 13px; border-radius: var(--radius-sm); border: 1px solid #2c4258;

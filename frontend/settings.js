@@ -482,7 +482,64 @@ async function loadPlaybooks() {
   }
 }
 
+/* ===== Billing & usage ===== */
+
+async function loadBilling() {
+  $('billing-content').innerHTML = '<p class="field-hint">Loading…</p>';
+  try {
+    const res = await apiFetch('/api/billing/status');
+    if (!res.ok) throw new Error('Could not load billing status.');
+    const status = await res.json();
+    $('billing-status-tag').textContent = status.plan.toUpperCase();
+    const limitText = status.monthly_call_limit === null ? 'No limit' : `${status.calls_used_this_month} / ${status.monthly_call_limit}`;
+    const pct = status.monthly_call_limit ? Math.min(100, Math.round(100 * status.calls_used_this_month / status.monthly_call_limit)) : 0;
+    const planRows = Object.entries(status.plans).map(([key, meta]) => `
+      <div class="history-row" style="cursor:default;padding:12px 16px;">
+        <div class="history-meta">
+          <strong>${escapeHtml(meta.label)}${key === status.plan ? ' <span class="chip chip-positive">Current</span>' : ''}</strong>
+          <span>${meta.monthly_calls === null ? 'Unlimited calls / month' : `${meta.monthly_calls} calls / month`} &middot; ${escapeHtml(meta.price_note)}</span>
+        </div>
+        ${isAdmin && key !== status.plan ? `<button class="copy-btn billing-plan-btn" type="button" data-plan="${escapeHtml(key)}">Switch</button>` : ''}
+      </div>
+    `).join('');
+    $('billing-content').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+        <strong style="font-size:0.875rem;">Calls this month</strong>
+        <span style="font-variant-numeric:tabular-nums;font-weight:800;">${escapeHtml(limitText)}</span>
+      </div>
+      <div style="height:10px;border-radius:6px;background:var(--orange);overflow:hidden;margin-bottom:18px;">
+        <div style="height:100%;width:${pct}%;background:var(--blue);"></div>
+      </div>
+      <div class="history-list">${planRows}</div>
+      ${isAdmin ? '<div id="billing-notice" class="notice" role="status" style="margin-top:14px;"></div>' : '<p class="field-hint" style="margin-top:14px;">Only an org admin can change the plan.</p>'}
+    `;
+    if (!isAdmin) return;
+    document.querySelectorAll('.billing-plan-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        setButtonLoading(btn, true, 'Switching…');
+        try {
+          const res = await apiFetch('/api/billing/plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: btn.dataset.plan }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.detail || 'Could not switch plan.');
+          await loadBilling();
+        } catch (error) {
+          setNotice($('billing-notice'), error.message, 'error');
+          setButtonLoading(btn, false);
+        }
+      });
+    });
+  } catch (error) {
+    $('billing-status-tag').textContent = 'ERROR';
+    $('billing-content').innerHTML = `<p class="field-hint">${escapeHtml(error.message)}</p>`;
+  }
+}
+
 if (session) {
+  loadBilling();
   loadWhatsApp();
   loadCrm();
   loadWebhooks();

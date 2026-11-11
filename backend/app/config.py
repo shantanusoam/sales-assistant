@@ -41,7 +41,25 @@ class Settings:
     twilio_default_to: str = field(default_factory=lambda: _env("TWILIO_DEFAULT_TO"))
     twilio_whatsapp_from: str = field(default_factory=lambda: _env("TWILIO_WHATSAPP_FROM"))  # E.164, no "whatsapp:" prefix
     twilio_whatsapp_template_sid: str = field(default_factory=lambda: _env("TWILIO_WHATSAPP_TEMPLATE_SID"))
+    # Reject TwiML/webhook requests whose X-Twilio-Signature does not validate. Only
+    # disable for local replay testing; production must keep this on.
+    twilio_validate_signatures: bool = field(default_factory=lambda: _env(
+        "TWILIO_VALIDATE_SIGNATURE", "true"
+    ).strip().lower() not in ("false", "0", "no"))
     public_base_url: str = field(default_factory=lambda: _env("PUBLIC_BASE_URL"))
+
+    # Transactional email (invites, password resets). Falls back to writing the email
+    # body into the server log when SMTP is not configured (local/dev mode).
+    smtp_host: str = field(default_factory=lambda: _env("SMTP_HOST"))
+    smtp_port: int = field(default_factory=lambda: int(_env("SMTP_PORT", "587") or 587))
+    smtp_user: str = field(default_factory=lambda: _env("SMTP_USER"))
+    smtp_password: str = field(default_factory=lambda: _env("SMTP_PASSWORD"))
+    email_from: str = field(default_factory=lambda: _env("EMAIL_FROM", "Sales Copilot <no-reply@salescopilot.local>"))
+
+    # Billing. Plans and monthly call limits live in billing.py; gateway (Razorpay)
+    # keys are wired in a later pass — plan changes are admin-manual until then.
+    razorpay_key_id: str = field(default_factory=lambda: _env("RAZORPAY_KEY_ID"))
+    razorpay_key_secret: str = field(default_factory=lambda: _env("RAZORPAY_KEY_SECRET"))
     playbook_dir: Path = ROOT / "playbooks"
     chroma_dir: Path = ROOT / "data" / "chroma"
     hint_cooldown_seconds: float = 1.5

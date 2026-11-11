@@ -5,13 +5,18 @@ from collections import Counter
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from .config import Settings
-from .models import Call, CallSummary, User
+from .models import Call, CallSummary, Hint, User
 from .post_call import TurnLike, generate_call_summary
+
+
+class HintFeedbackRequest(BaseModel):
+    value: int = Field(description="+1 (used/useful) or -1 (not useful)")
 
 
 def _call_summary(call: Call, rep_names: dict[str, str] | None = None) -> dict:
@@ -68,6 +73,11 @@ def build_calls_router(get_db, require_auth, settings: Settings | None = None) -
         total_objections = sum(
             1 for c in calls for t in c.turns if "objection" in json.loads(t.intents_json or "[]")
         )
+        # Hint-acceptance rate: the product's north-star coaching metric. Feedback is
+        # captured in-app (and from the mobile app) as +1/-1 per delivered hint.
+        feedback_values = [h.feedback for c in calls for h in c.hints if h.feedback in (1, -1)]
+        positive = sum(1 for v in feedback_values if v == 1)
+        hint_acceptance_rate = round(100 * positive / len(feedback_values), 1) if feedback_values else None
         rep_buckets: dict[str, list[int]] = {}
         rep_counts: Counter = Counter()
         for c in calls:
@@ -92,6 +102,8 @@ def build_calls_router(get_db, require_auth, settings: Settings | None = None) -
             "total_turns": total_turns,
             "total_hints": total_hints,
             "total_objections": total_objections,
+            "total_hint_feedback": len(feedback_values),
+            "hint_acceptance_rate": hint_acceptance_rate,
             "dispositions": dict(dispositions),
             "channels": dict(channels),
             "reps": reps,
@@ -156,15 +168,30 @@ def build_calls_router(get_db, require_auth, settings: Settings | None = None) -
             ],
             "hints": [
                 {
+                    "id": h.id,
                     "text": h.text,
                     "method": h.method,
                     "sources": json.loads(h.sources_json),
                     "processing_ms": h.processing_ms,
+                    "feedback": h.feedback,
                     "created_at": h.created_at.isoformat(),
                 }
                 for h in call.hints
             ],
         }
+
+    @router.post("/hints/{hint_id}/feedback")
+    async def hint_feedback(
+        hint_id: str, payload: HintFeedbackRequest, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)
+    ) -> dict:
+        if payload.value not in (1, -1):
+            raise HTTPException(400, "Feedback value must be 1 or -1.")
+        hint = await db.get(Hint, hint_id, options=[selectinload(Hint.call)])
+        if hint is None or hint.call is None or hint.call.organization_id != claims["org_id"]:
+            raise HTTPException(404, "Hint not found.")
+        hint.feedback = payload.value
+        await db.commit()
+        return {"id": hint.id, "feedback": hint.feedback}
 
     @router.post("/{call_id}/summarize")
     async def regenerate_summary(call_id: str, claims: dict = Depends(require_auth), db: AsyncSession = Depends(get_db)) -> dict:

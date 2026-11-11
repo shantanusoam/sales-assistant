@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 const session = requireSession();
 const state = {
   ws: null, microphoneEnabled: false, llmEnabled: false, sttProvider: 'deepgram',
-  testSpeaker: 'customer', wakeLock: null,
+  testSpeaker: 'customer', wakeLock: null, lastHintId: null,
   stream: null, context: null, source: null, processor: null, sink: null,
   playbackCtx: null, nextPlayTime: 0,
   dropped: 0, hintCount: 0, startedAt: 0, lastHint: null,
@@ -241,12 +241,21 @@ function handleMessage(raw) {
     case 'hint':
       if (state.lastHint) pushHintHistory(state.lastHint);
       state.lastHint = { text: message.text, method: message.method };
+      state.lastHintId = message.id || null;
       $('hint-text').textContent = message.text;
       $('ai-badge').textContent = message.method === 'ai' ? 'AI GENERATED' : 'DEMO RULE';
       $('latency').textContent = `${message.processing_ms} ms backend processing`;
       state.hintCount++; $('hint-counter').textContent = `${state.hintCount} hint${state.hintCount === 1 ? '' : 's'}`;
       $('rag-mode').textContent = String(message.retrieval_mode || 'demo').replace(/-/g, ' ').toUpperCase();
       updateSources(message.sources);
+      if ($('hint-feedback-row')) {
+        $('hint-feedback-row').hidden = !state.lastHintId;
+        for (const btn of ['fb-up', 'fb-down']) {
+          const el = $(btn);
+          el.disabled = false;
+          el.classList.remove('feedback-sent');
+        }
+      }
       $('insight-area').classList.remove('flash');
       requestAnimationFrame(() => {
         $('insight-area').classList.add('flash');
@@ -322,6 +331,26 @@ function setTestSpeaker(speaker) {
     btn.classList.toggle('active', btn.dataset.speaker === state.testSpeaker);
   });
 }
+async function sendHintFeedback(value, btn) {
+  if (!state.lastHintId) return;
+  try {
+    const res = await apiFetch(`/api/calls/hints/${state.lastHintId}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) throw new Error('Could not record feedback.');
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('feedback-sent');
+      const other = $(value === 1 ? 'fb-down' : 'fb-up');
+      if (other) { other.disabled = true; other.classList.remove('feedback-sent'); }
+    }
+    notice(value === 1 ? 'Thanks — marked helpful.' : 'Thanks — we\'ll use that to improve hints.', 'success');
+  } catch (error) {
+    notice(error.message, 'error');
+  }
+}
 function sendTest() {
   if (!connected()) throw new Error('Connect before submitting a test utterance.');
   const text = $('test-text').value.trim();
@@ -384,6 +413,8 @@ bind('stop-mic', stopMicrophone);
 bind('send-test', sendTest);
 bind('make-call-btn', makeCall);
 bind('logout-btn', logout);
+$('fb-up')?.addEventListener('click', (e) => sendHintFeedback(1, e.currentTarget));
+$('fb-down')?.addEventListener('click', (e) => sendHintFeedback(-1, e.currentTarget));
 document.querySelectorAll('.speaker-btn').forEach((btn) => {
   btn.addEventListener('click', () => setTestSpeaker(btn.dataset.speaker));
 });

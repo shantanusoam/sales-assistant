@@ -21,16 +21,20 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from starlette.websockets import WebSocketDisconnect
 
 from .agent import HintAgent
 from .auth import extract_ws_token, verify_token
 from .auth_routes import build_auth_router
+from .billing import QUOTA_MESSAGE, calls_allowed, usage_for_org
+from .billing_routes import build_billing_router
 from .calls_routes import build_calls_router
 from .crm import CRMError, build_provider
 from .crm_routes import build_crm_router
+from .emailer import build_mailer
 from .playbook_routes import build_playbook_router
+from .twilio_security import validate_twilio_signature
 from .webhook_routes import build_webhook_router
 from .crypto import decrypt_secret
 from .config import ROOT, Settings
@@ -39,7 +43,7 @@ from .deepgram import DeepgramStream
 from .speech_sarvam import SarvamStream
 from .deps import build_current_claims_dependency
 from .knowledge import KnowledgeBase
-from .models import Call, CallSummary, CRMConnection, Hint, Turn, User, WebhookNode
+from .models import Call, CallSummary, CRMConnection, Hint, Organization, Turn, User, WebhookNode
 from .post_call import TurnLike, generate_call_summary
 from .signals import CUSTOMER_SOURCES, REP_SOURCES, CallSignals, tag_turn
 
@@ -146,12 +150,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     agent = HintAgent(config)
     live_broadcasters: dict[str, set[Callable[[dict], Awaitable[None]]]] = defaultdict(set)
     twilio_outbound_senders: dict[str, set[Callable[[bytes], Awaitable[None]]]] = defaultdict(set)
-    require_auth = build_current_claims_dependency(config)
-    application.include_router(build_auth_router(config, get_db))
+    require_auth = build_current_claims_dependency(config, get_db)
+    mailer = build_mailer(config)
+    application.include_router(build_auth_router(config, get_db, mailer))
     application.include_router(build_calls_router(get_db, require_auth, config))
     application.include_router(build_crm_router(config, get_db, require_auth))
+    application.include_router(build_billing_router(get_db, require_auth))
     application.include_router(build_webhook_router(get_db, require_auth))
     application.include_router(build_playbook_router(config, knowledge, require_auth))
+
+    async def org_within_call_quota(org_id: str | None) -> bool:
+        """Metering gate for every new call (browser WS, Twilio, mobile logger)."""
+        if not org_id:
+            return True
+        async with db_sessions() as db:
+            return await calls_allowed(db, org_id)
 
     async def summarize_call(call_id: str) -> None:
         """Runs after a call ends: generates and persists its post-call summary.
@@ -335,6 +348,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def settings_page() -> FileResponse:
         return FileResponse(FRONTEND / "settings.html")
 
+    @application.get("/reset-password")
+    @application.get("/forgot-password")
+    @application.get("/accept-invite")
+    async def auth_token_page() -> FileResponse:
+        """One shared page handles forgot-password, reset (token), and invite-accept links."""
+        return FileResponse(FRONTEND / "reset-password.html")
+
     @application.get("/api/health")
     async def health() -> dict:
         db_ok = True
@@ -343,10 +363,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await session.execute(select(1))
         except Exception:
             db_ok = False
+        email_configured = bool(config.smtp_host)
         return {
             "ok": True,
             "auth_configured": config.configured,
             "database_ok": db_ok,
+            "email_configured": email_configured,
             "microphone_transcription_configured": _mic_stt_configured(config),
             "stt_provider": config.stt_provider,
             "llm_configured": bool(config.openai_api_key),
@@ -361,6 +383,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Truecaller-style post-call / field-sales mobile call logger: records turns,
         generates a grounded playbook hint + post-call summary, and distributes to
         CRM/WhatsApp/webhooks when consent_confirmed is True."""
+        if not await org_within_call_quota(claims["org_id"]):
+            raise HTTPException(402, QUOTA_MESSAGE)
         now = datetime.now(timezone.utc)
         clean_turns: list[tuple[str, str, str, list[str]]] = []
         for item in payload.turns:
@@ -441,6 +465,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def start_outbound_call(request: Request, payload: OutboundCallRequest, claims: dict = Depends(require_auth)) -> dict:
         if not (config.twilio_account_sid and config.twilio_auth_token and config.twilio_phone_number):
             raise HTTPException(400, "Twilio credentials are not configured in .env.")
+        if not await org_within_call_quota(claims["org_id"]):
+            raise HTTPException(402, QUOTA_MESSAGE)
         raw_to = "".join(c for c in payload.to.strip() if c.isdigit() or c == "+")
         if not raw_to:
             raise HTTPException(400, "Enter a valid phone number.")
@@ -518,6 +544,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8765"
         ws_scheme = "ws" if host.startswith(("localhost", "127.0.0.1")) else "wss"
         ws_url = f"{ws_scheme}://{host}/ws/twilio-media"
+        # Twilio signs its webhook requests with X-Twilio-Signature (HMAC-SHA1 over the
+        # full URL + sorted params). Without this check anyone who learns the URL could
+        # spin up Media Streams on our Twilio account and burn STT credits. Note: behind
+        # a reverse proxy the scheme/host Twilio signed must match what we reconstruct,
+        # so PUBLIC_BASE_URL/x-forwarded-* headers must be preserved by the proxy.
+        if config.twilio_validate_signatures and config.twilio_auth_token:
+            signature = request.headers.get("x-twilio-signature", "")
+            signed_params: dict[str, str] = {k: v for k, v in request.query_params.items()}
+            if request.method == "POST":
+                form = await request.form()
+                signed_params.update({k: str(form[k]) for k in form})
+            if not validate_twilio_signature(config.twilio_auth_token, str(request.url), signed_params, signature):
+                raise HTTPException(403, "Invalid Twilio signature.")
         stream_params = "".join(
             f'<Parameter name="{name}" value="{value}" />'
             for name, value in (
@@ -612,17 +651,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
             await asyncio.shield(_write())
 
-        async def record_db_hint(text: str, method: str, sources: list, processing_ms: int) -> None:
+        async def record_db_hint(text: str, method: str, sources: list, processing_ms: int) -> str | None:
             if not db_call_id:
-                return
+                return None
 
-            async def _write() -> None:
+            async def _write() -> str:
                 async with db_sessions() as db:
-                    db.add(Hint(call_id=db_call_id, text=text, method=method,
-                                 sources_json=json.dumps(sources), processing_ms=processing_ms))
+                    hint = Hint(call_id=db_call_id, text=text, method=method,
+                                sources_json=json.dumps(sources), processing_ms=processing_ms)
+                    db.add(hint)
                     await db.commit()
+                    return hint.id
 
-            await asyncio.shield(_write())
+            return await asyncio.shield(_write())
 
         async def close_db_call() -> None:
             if not db_call_id:
@@ -692,15 +733,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     hint, method = await agent.generate(utterance, list(history), sources)
                     public_sources = [s.public() for s in sources]
                     processing_ms = int((time.perf_counter() - started) * 1000)
+                    hint_id = await record_db_hint(hint, method, public_sources, processing_ms)
                     await broadcast_to_dashboards({
                         "type": "hint",
+                        "id": hint_id,
                         "text": hint,
                         "method": method,
                         "sources": public_sources,
                         "retrieval_mode": knowledge.mode,
                         "processing_ms": processing_ms,
                     }, org_id=call_org_id)
-                    await record_db_hint(hint, method, public_sources, processing_ms)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -819,6 +861,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await ws.close(code=1008, reason="Invalid or expired session token")
             return
         await ws.accept(subprotocol="copilot-v1")
+        # Session revocation: a password change/reset bumps the user's token_version,
+        # so previously issued tokens (with a stale `tv` claim) stop working here too.
+        async with db_sessions() as db:
+            ws_user = await db.get(User, claims.get("user_id", ""))
+        if ws_user is None or claims.get("tv", 0) != ws_user.token_version:
+            await ws.close(code=1008, reason="Session expired. Please log in again.")
+            return
+        # Monthly plan quota for this organization.
+        if not await org_within_call_quota(claims["org_id"]):
+            await ws.send_json({"type": "error", "message": QUOTA_MESSAGE})
+            await ws.close(code=1013, reason="Monthly call limit reached")
+            return
         send_lock = asyncio.Lock()
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
         history: deque[str] = deque(maxlen=7)
@@ -861,17 +915,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
             await asyncio.shield(_write())
 
-        async def record_hint(text: str, method: str, sources: list, processing_ms: int) -> None:
+        async def record_hint(text: str, method: str, sources: list, processing_ms: int) -> str | None:
             if not call_id:
-                return
+                return None
 
-            async def _write() -> None:
+            async def _write() -> str:
                 async with db_sessions() as db:
-                    db.add(Hint(call_id=call_id, text=text, method=method,
-                                 sources_json=json.dumps(sources), processing_ms=processing_ms))
+                    hint = Hint(call_id=call_id, text=text, method=method,
+                                sources_json=json.dumps(sources), processing_ms=processing_ms)
+                    db.add(hint)
                     await db.commit()
+                    return hint.id
 
-            await asyncio.shield(_write())
+            return await asyncio.shield(_write())
 
         async def close_call() -> None:
             if not call_id:
@@ -932,15 +988,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     hint, method = await agent.generate(utterance, list(history), sources)
                     public_sources = [s.public() for s in sources]
                     processing_ms = int((time.perf_counter() - started) * 1000)
+                    hint_id = await record_hint(hint, method, public_sources, processing_ms)
                     await send({
                         "type": "hint",
+                        "id": hint_id,
                         "text": hint,
                         "method": method,
                         "sources": public_sources,
                         "retrieval_mode": knowledge.mode,
                         "processing_ms": processing_ms,
                     })
-                    await record_hint(hint, method, public_sources, processing_ms)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:

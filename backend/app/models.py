@@ -23,6 +23,8 @@ class Organization(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(200))
+    plan: Mapped[str] = mapped_column(String(20), default="pilot", server_default="pilot")  # see billing.py PLANS
+    monthly_call_limit_override: Mapped[int | None] = mapped_column(nullable=True)  # per-org manual override
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="organization")
@@ -35,11 +37,43 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(200))
     name: Mapped[str] = mapped_column(String(200))
+    # Bumped on password change/reset so every previously issued session token
+    # (which carries the old value as its `tv` claim) stops verifying immediately.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     whatsapp_number: Mapped[str | None] = mapped_column(String(32), nullable=True)  # E.164, e.g. +9198...
     whatsapp_recap_enabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user")
+
+
+class PasswordResetToken(Base):
+    """Single-use, time-boxed token for the forgot-password flow. Only the SHA-256
+    hash of the raw token is stored, so a DB leak cannot mint working reset links."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class InviteToken(Base):
+    """Single-use token behind an emailed invite link, replacing admin-set plaintext
+    passwords. Expires quickly and is deleted on first use."""
+
+    __tablename__ = "invite_tokens"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class Membership(Base):
@@ -107,6 +141,9 @@ class Hint(Base):
     method: Mapped[str] = mapped_column(String(20))  # "ai" | "rules-demo"
     sources_json: Mapped[str] = mapped_column(Text, default="[]")
     processing_ms: Mapped[int] = mapped_column(Integer)
+    # Rep feedback captured in-app: +1 (used/useful) or -1 (not useful). Feeds the
+    # hint-acceptance-rate metric in /api/calls/analytics and future prompt evals.
+    feedback: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     call: Mapped[Call] = relationship(back_populates="hints")

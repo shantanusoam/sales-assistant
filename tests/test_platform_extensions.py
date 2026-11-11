@@ -26,6 +26,7 @@ def _settings(tmp_sqlite_url, tmp_path=None):
         database_url=tmp_sqlite_url,
         deepgram_api_key="",
         openai_api_key="",
+        twilio_validate_signatures=False,  # this suite tests isolation/quota, not Twilio signatures
         playbook_dir=playbook_dir,
     )
 

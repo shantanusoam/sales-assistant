@@ -145,7 +145,7 @@ You can also test the endpoint with `TestClient` (see `tests/test_end_to_end.py`
 - `GET /api/auth/team` — `Authorization: Bearer <token>`. Lists all members of the caller's organization (`admin`, `manager`, `rep`).
 - `POST /api/auth/invite` — admin-only. `{ name, email, password, role }` (`role` is `admin`, `manager`, or `rep`) adds a teammate to the caller's organization (also available directly from **Settings → Team members**).
 
-Session tokens are the same claims-based HMAC token described below, valid for `token_ttl_seconds` (12 hours by default), carrying `user_id`, `org_id`, and `role`.
+Session tokens are the same claims-based HMAC token described below, valid for `token_ttl_seconds` (12 hours by default), carrying `user_id`, `org_id`, and `role`. Changing or resetting a password **immediately revokes every existing session** (token versioning). Invites go out as emailed, single-use, 72-hour links (`/accept-invite?token=…`); without SMTP configured, the invite link is returned in the API response so an admin can hand it over manually. `POST /api/auth/forgot` → `POST /api/auth/reset` implement password reset with hashed, single-use, 60-minute tokens, and `PATCH /api/auth/me/password` lets a logged-in user change their own password.
 
 ## Call history and coaching analytics
 
@@ -172,7 +172,27 @@ Connect HubSpot from **Settings** (admin-only) with a [Private App access token]
 
 Every call now requires the rep to confirm consent before it starts: a checkbox on the dashboard ("I've informed the other party this call is analyzed for sales coaching, and have their consent") gates both **Connect** and **Call phone**, sends a `confirm_consent` WebSocket message, and sets `Call.consent_confirmed_at`. Outbound Twilio calls carry the same flag through as a TwiML `<Parameter>`. **Nothing is pushed to a third party (CRM, WhatsApp, webhooks) for a call that wasn't consent-confirmed** — the summary still generates and is visible in Call History either way, it just stays internal. This is deliberately stricter than most "this call may be recorded" banners: see the design notes on India's DPDP Act 2023, which requires specific, informed, affirmative consent for commercial call processing, not a generic disclaimer.
 
-Post-call analysis now also includes a **disposition** (`interested` / `not_interested` / `follow_up` / `no_decision` / `do_not_contact`) — AI-classified when OpenAI is configured, heuristic otherwise (`backend/app/post_call.py`), shown as a colored tag in Call History.
+Post-call analysis now also includes a **disposition** (`interested` / `not_interested` / `follow_up` / `no_decision` / `do_not_contact`) — AI-classified when OpenAI is configured, heuristic otherwise (`backend/app/post_call.py`), shown as a colored tag in Call History. Every delivered hint carries its database id so reps can mark it **Helpful / Not helpful** from the dashboard; feedback is stored per hint and rolled up as `hint_acceptance_rate` in `GET /api/calls/analytics` — the product's north-star coaching metric.
+
+## Billing, plans, and call quotas
+
+Every organization sits on a plan (`backend/app/billing.py`): **Pilot** (50 calls/month), **Growth** (500/month), or **Scale** (no limit), with an optional per-org `monthly_call_limit_override`. All three call entry points — browser `/ws/live`, Twilio `POST /api/twilio/call`, and the mobile logger `POST /api/calls/log-mobile` — enforce the meter against the current UTC month and fail gracefully (HTTP 402 / a WebSocket error+close) when it's exhausted. Admins can view usage and switch plans from **Settings → Billing** (`GET/POST /api/billing/*`); plan changes are manual until the Razorpay order + webhook flow is wired (keys are already provisioned in config).
+
+## Twilio webhook authentication
+
+`/api/twilio/twiml` validates Twilio's `X-Twilio-Signature` header (HMAC-SHA1 over the full URL + sorted params, `backend/app/twilio_security.py`) and rejects anything unsigned with HTTP 403, so a leaked URL can't be used to spin up Media Streams on your Twilio account. Disable only for local replay testing with `TWILIO_VALIDATE_SIGNATURE=false`. Behind a reverse proxy, the proxy must preserve the scheme/host Twilio signed (set `PUBLIC_BASE_URL` and forward `x-forwarded-*` headers).
+
+## Email (invites & password resets)
+
+Set `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`EMAIL_FROM` to send real transactional email. Unset `SMTP_HOST` is **dev mode**: message bodies (including invite/reset links) are written to the server log, and invite responses carry the link back to the admin UI so the flow completes without infrastructure.
+
+## Deploying with Docker
+
+```bash
+docker compose up --build
+```
+
+runs the app (migrations applied automatically at boot) against a Postgres 16 service. Set `DATABASE_URL=postgresql+asyncpg://...` in `.env` for non-Docker deploys, and run `python -m alembic upgrade head` on release. GitHub Actions (`.github/workflows/ci.yml`) runs the full pytest suite and JS syntax checks on every push to `main`.
 
 Two distribution channels, both gated on consent, both firing from the same point as the existing CRM push:
 
